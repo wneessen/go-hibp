@@ -19,7 +19,7 @@ func TestPwnedPasswordString(t *testing.T) {
 
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassword.CheckPassword(tc.pwString)
+			m, _, err := hc.PwnedPassApi.CheckPassword(tc.pwString)
 			if err != nil {
 				t.Error(err)
 			}
@@ -47,12 +47,17 @@ func TestPwnedPasswordHash(t *testing.T) {
 			"90efc095c82eab44e882fda507cfab1a2cd31fc0", false},
 	}
 	hc := New()
+	if hc == nil {
+		t.Error("failed to create HIBP client")
+		return
+	}
 
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassword.CheckSHA1(tc.pwHash)
+			m, _, err := hc.PwnedPassApi.CheckSHA1(tc.pwHash)
 			if err != nil {
 				t.Error(err)
+				return
 			}
 			if m == nil && tc.isLeaked {
 				t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")

@@ -1,15 +1,20 @@
 package hibp
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
 )
 
 // Version represents the version of this package
-const Version = "0.1.1"
+const Version = "0.1.2"
+
+// BaseUrl is the base URL for the majority of API calls
+const BaseUrl = "https://haveibeenpwned.com/api/v3"
 
 // Client is the HIBP client object
 type Client struct {
@@ -17,7 +22,10 @@ type Client struct {
 	to time.Duration // HTTP client timeout
 	ak string        // HIBP API key
 
-	PwnedPassword *PwnedPassword // Reference to the PwnedPassword API
+	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
+	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
+
+	BreachApi *BreachApi // Reference to the BreachApi API
 }
 
 // Option is a function that is used for grouping of Client options.
@@ -29,6 +37,7 @@ func New(options ...Option) *Client {
 
 	// Set defaults
 	c.to = time.Second * 5
+	c.PwnedPassApiOpts = &PwnedPasswordOptions{}
 
 	// Set additional options
 	for _, opt := range options {
@@ -39,7 +48,8 @@ func New(options ...Option) *Client {
 	c.hc = httpClient(c.to)
 
 	// Associate the different HIBP service APIs with the Client
-	c.PwnedPassword = &PwnedPassword{hc: c}
+	c.PwnedPassApi = &PwnedPassApi{hibp: c}
+	c.BreachApi = &BreachApi{hibp: c}
 
 	return c
 }
@@ -58,22 +68,52 @@ func WithApiKey(k string) Option {
 	}
 }
 
+// WithPwnedPadding enables padding-mode for the PwnedPasswords API client
+func WithPwnedPadding() Option {
+	return func(c *Client) {
+		c.PwnedPassApiOpts.WithPadding = true
+	}
+}
+
 // HttpReq performs an HTTP request to the corresponding API
-func (c *Client) HttpReq(m, p string) (*http.Request, error) {
+func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
 	if err != nil {
 		return nil, err
+	}
+
+	if m == http.MethodGet {
+		uq := u.Query()
+		for k, v := range q {
+			uq.Add(k, v)
+		}
+		u.RawQuery = uq.Encode()
 	}
 
 	hr, err := http.NewRequest(m, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	if m == http.MethodPost {
+		pd := url.Values{}
+		for k, v := range q {
+			pd.Add(k, v)
+		}
+
+		rb := io.NopCloser(bytes.NewBufferString(pd.Encode()))
+		hr.Body = rb
+	}
+
 	hr.Header.Set("Accept", "application/json")
 	hr.Header.Set("User-Agent", fmt.Sprintf("go-hibp v%s - https://github.com/wneessen/go-hibp", Version))
 
 	if c.ak != "" {
-		hr.Header["hibp-api-key"] = []string{c.ak}
+		hr.Header.Set("hibp-api-key", c.ak)
+	}
+
+	if c.PwnedPassApiOpts.WithPadding {
+		hr.Header.Set("Add-Padding", "true")
 	}
 
 	return hr, nil
