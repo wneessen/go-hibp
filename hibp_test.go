@@ -1,6 +1,7 @@
 package hibp
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -36,5 +37,19 @@ func TestNewWithPwnedPadding(t *testing.T) {
 	if !hc.PwnedPassApiOpts.WithPadding {
 		t.Errorf("hibp client pwned padding option was not set properly. Expected %v, got: %v",
 			true, hc.PwnedPassApiOpts.WithPadding)
+	}
+}
+
+// TestNewWithApiKey tests the New() function with the API key set
+func TestNewWithApiKey(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	hc := New(WithApiKey(apiKey))
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+	if hc.ak != apiKey {
+		t.Errorf("hibp client API key was not set properly. Expected %s, got: %s",
+			apiKey, hc.ak)
 	}
 }
