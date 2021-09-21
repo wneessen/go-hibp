@@ -1,15 +1,17 @@
 package hibp
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
 )
 
 // Version represents the version of this package
-const Version = "0.1.1"
+const Version = "0.1.2"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
@@ -74,16 +76,35 @@ func WithPwnedPadding() Option {
 }
 
 // HttpReq performs an HTTP request to the corresponding API
-func (c *Client) HttpReq(m, p string) (*http.Request, error) {
+func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
 	if err != nil {
 		return nil, err
+	}
+
+	if m == http.MethodGet {
+		uq := u.Query()
+		for k, v := range q {
+			uq.Add(k, v)
+		}
+		u.RawQuery = uq.Encode()
 	}
 
 	hr, err := http.NewRequest(m, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	if m == http.MethodPost {
+		pd := url.Values{}
+		for k, v := range q {
+			pd.Add(k, v)
+		}
+
+		rb := io.NopCloser(bytes.NewBufferString(pd.Encode()))
+		hr.Body = rb
+	}
+
 	hr.Header.Set("Accept", "application/json")
 	hr.Header.Set("User-Agent", fmt.Sprintf("go-hibp v%s - https://github.com/wneessen/go-hibp", Version))
 

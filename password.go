@@ -11,17 +11,19 @@ import (
 
 // PwnedPassApi is a HIBP Pwned Passwords API client
 type PwnedPassApi struct {
-	hibp *Client
+	hibp *Client // References back to the parent HIBP client
 }
 
 // Match represents a match in the Pwned Passwords API
 type Match struct {
-	Hash  string
-	Count int64
+	Hash  string // SHA1 hash of the matching password
+	Count int64  // Represents the number of leaked accounts that hold/held this password
 }
 
 // PwnedPasswordOptions is a struct of additional options for the PP API
 type PwnedPasswordOptions struct {
+	// WithPadding controls if the PwnedPassword API returns with padding or not
+	// See: https://haveibeenpwned.com/API/v3#PwnedPasswordsPadding
 	WithPadding bool
 }
 
@@ -51,7 +53,8 @@ func (p *PwnedPassApi) CheckSHA1(h string) (*Match, *http.Response, error) {
 // the http.Response
 func (p *PwnedPassApi) apiCall(h string) ([]Match, *http.Response, error) {
 	sh := h[:5]
-	hreq, err := p.hibp.HttpReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", sh))
+	hreq, err := p.hibp.HttpReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", sh),
+		nil)
 	if err != nil {
 		return nil, nil, err
 	}

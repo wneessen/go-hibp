@@ -11,10 +11,11 @@ import (
 
 // BreachApi is a HIBP breaches API client
 type BreachApi struct {
-	hibp *Client
+	hibp *Client // References back to the parent HIBP client
 
-	// Options
-	domain string // Filter for a specific breach domain
+	domain       string // Filter for a specific breach domain
+	disableTrunc bool   // Controls the truncateResponse parameter for the breaches API (defaults to false)
+	noUnverified bool   // Controls the includeUnverified parameter for the breaches API (defaults to false)
 }
 
 // Breach represents a JSON response structure of the breaches API
@@ -60,6 +61,32 @@ type Breach struct {
 	// DataClasses describes the nature of the data compromised in the breach and contains an alphabetically ordered
 	// string array of impacted data classes
 	DataClasses []string `json:"DataClasses"`
+
+	// IsVerified indicates that the breach is considered unverified. An unverified breach may not have
+	// been hacked from the indicated website. An unverified breach is still loaded into HIBP when there's
+	// sufficient confidence that a significant portion of the data is legitimate
+	IsVerified bool `json:"IsVerified"`
+
+	// IsFabricated indicates that the breach is considered fabricated. A fabricated breach is unlikely
+	// to have been hacked from the indicated website and usually contains a large amount of manufactured
+	// data. However, it still contains legitimate email addresses and asserts that the account owners
+	// were compromised in the alleged breach
+	IsFabricated bool `json:"IsFabricated"`
+
+	// IsSensitive indicates if the breach is considered sensitive. The public API will not return any
+	// accounts for a breach flagged as sensitive
+	IsSensitive bool `json:"IsSensitive"`
+
+	// IsRetired indicates if the breach has been retired. This data has been permanently removed and
+	// will not be returned by the API
+	IsRetired bool `json:"IsRetired"`
+
+	// IsSpamList indicates
+	IsSpamList bool `json:"IsSpamList"`
+
+	// LogoPath represents a URI that specifies where a logo for the breached service can be found.
+	// Logos are always in PNG format
+	LogoPath string `json:"LogoPath"`
 }
 
 // BreachOption is an additional option the can be set for the BreachApiClient
@@ -70,16 +97,29 @@ type ApiDate time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
 func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
+	queryParms := map[string]string{
+		"truncateResponse":  "true",
+		"includeUnverified": "true",
+	}
+	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
+
 	for _, opt := range options {
 		opt(b)
 	}
 
-	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
 	if b.domain != "" {
-		apiUrl = fmt.Sprintf("%s?domain=%s", apiUrl, b.domain)
+		queryParms["domain"] = b.domain
 	}
 
-	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl)
+	if b.disableTrunc {
+		queryParms["truncateResponse"] = "false"
+	}
+
+	if b.noUnverified {
+		queryParms["includeUnverified"] = "false"
+	}
+
+	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParms)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -111,6 +151,13 @@ func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 func WithDomain(d string) BreachOption {
 	return func(b *BreachApi) {
 		b.domain = d
+	}
+}
+
+// WithoutTruncate disables the truncateResponse parameter in the breaches API
+func WithoutTruncate() BreachOption {
+	return func(b *BreachApi) {
+		b.disableTrunc = true
 	}
 }
 
