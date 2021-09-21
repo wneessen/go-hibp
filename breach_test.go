@@ -15,7 +15,7 @@ func TestBreaches(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(breachList) <= 0 {
+	if breachList != nil && len(breachList) <= 0 {
 		t.Error("breaches list returned 0 results")
 	}
 }
@@ -43,6 +43,12 @@ func TestBreachesWithDomain(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+
+			if breachList == nil && tc.isBreached {
+				t.Errorf("domain %s is expected to be breached, but returned 0 results.",
+					tc.domain)
+			}
+
 			breachLen := len(breachList)
 			if tc.isBreached && breachLen <= 0 {
 				t.Errorf("domain %s is expected to be breached, but returned 0 results.",
