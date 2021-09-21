@@ -18,6 +18,7 @@ func TestNewWithHttpTimeout(t *testing.T) {
 	hc := New(WithHttpTimeout(time.Second * 10))
 	if hc == nil {
 		t.Errorf("hibp client creation failed")
+		return
 	}
 	if hc.to != time.Second*10 {
 		t.Errorf("hibp client timeout option was not set properly. Expected %d, got: %d",

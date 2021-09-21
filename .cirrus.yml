@@ -17,7 +17,6 @@ lint_task:
 
 build_task:
   modules_cache:
-    fingerprint_script: cat go.sum
     folder: $GOPATH/pkg/mod
   get_script: go get github.com/wneessen/go-hibp
   build_script: go build github.com/wneessen/go-hibp
