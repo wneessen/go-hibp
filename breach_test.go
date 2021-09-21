@@ -9,6 +9,7 @@ func TestBreaches(t *testing.T) {
 	hc := New()
 	if hc == nil {
 		t.Errorf("hibp client creation failed")
+		return
 	}
 
 	breachList, _, err := hc.BreachApi.Breaches()
