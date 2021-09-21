@@ -1,44 +1,98 @@
-package go_hibp
+package hibp
 
 import (
-	"bufio"
-	"crypto/sha1"
+	"crypto/tls"
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
 )
 
-// HIBPUrl represents the main API url for the HIBP password API
-const HIBPUrl = "https://api.pwnedpasswords.com/range/"
+// Version represents the version of this package
+const Version = "0.1.1"
 
-// Check queries the HIBP database and checks if a given string is was found
-func Check(p string) (ip bool, err error) {
-	shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(p)))
-	fp := shaSum[0:5]
-	sp := shaSum[5:]
-	ip = false
+// Client is the HIBP client object
+type Client struct {
+	hc *http.Client  // HTTP client to perform the API requests
+	to time.Duration // HTTP client timeout
+	ak string        // HIBP API key
 
-	httpClient := &http.Client{Timeout: time.Second * 2}
-	httpRes, err := httpClient.Get(HIBPUrl + fp)
+	PwnedPassword *PwnedPassword // Reference to the PwnedPassword API
+}
+
+// Option is a function that is used for grouping of Client options.
+type Option func(*Client)
+
+// New creates and returns a new HIBP client object
+func New(options ...Option) *Client {
+	c := &Client{}
+
+	// Set defaults
+	c.to = time.Second * 5
+
+	// Set additional options
+	for _, opt := range options {
+		opt(c)
+	}
+
+	// Add a http client to the Client object
+	c.hc = httpClient(c.to)
+
+	// Associate the different HIBP service APIs with the Client
+	c.PwnedPassword = &PwnedPassword{hc: c}
+
+	return c
+}
+
+// WithHttpTimeout overrides the default http client timeout
+func WithHttpTimeout(t time.Duration) Option {
+	return func(c *Client) {
+		c.to = t
+	}
+}
+
+// WithApiKey set the optional API key to the Client object
+func WithApiKey(k string) Option {
+	return func(c *Client) {
+		c.ak = k
+	}
+}
+
+// HttpReq performs an HTTP request to the corresponding API
+func (c *Client) HttpReq(m, p string) (*http.Request, error) {
+	u, err := url.Parse(p)
 	if err != nil {
-		return false, err
-	}
-	defer func() {
-		err = httpRes.Body.Close()
-	}()
-
-	scanObj := bufio.NewScanner(httpRes.Body)
-	for scanObj.Scan() {
-		scanLine := strings.SplitN(scanObj.Text(), ":", 2)
-		if strings.ToLower(scanLine[0]) == sp {
-			ip = true
-			break
-		}
-	}
-	if err := scanObj.Err(); err != nil {
-		return ip, err
+		return nil, err
 	}
 
-	return ip, nil
+	hr, err := http.NewRequest(m, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	hr.Header.Set("Accept", "application/json")
+	hr.Header.Set("User-Agent", fmt.Sprintf("go-hibp v%s - https://github.com/wneessen/go-hibp", Version))
+
+	if c.ak != "" {
+		hr.Header["hibp-api-key"] = []string{c.ak}
+	}
+
+	return hr, nil
+}
+
+// httpClient returns a custom http client for the HIBP Client object
+func httpClient(to time.Duration) *http.Client {
+	tlsConfig := &tls.Config{
+		MaxVersion: tls.VersionTLS13,
+		MinVersion: tls.VersionTLS12,
+	}
+	httpTransport := &http.Transport{TLSClientConfig: tlsConfig}
+	httpClient := &http.Client{
+		Transport: httpTransport,
+		Timeout:   5 * time.Second,
+	}
+	if to.Nanoseconds() > 0 {
+		httpClient.Timeout = to
+	}
+
+	return httpClient
 }
