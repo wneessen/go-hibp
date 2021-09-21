@@ -19,7 +19,7 @@ func TestPwnedPasswordString(t *testing.T) {
 
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassword.CheckPassword(tc.pwString)
+			m, _, err := hc.PwnedPassApi.CheckPassword(tc.pwString)
 			if err != nil {
 				t.Error(err)
 			}
@@ -50,7 +50,7 @@ func TestPwnedPasswordHash(t *testing.T) {
 
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassword.CheckSHA1(tc.pwHash)
+			m, _, err := hc.PwnedPassApi.CheckSHA1(tc.pwHash)
 			if err != nil {
 				t.Error(err)
 			}

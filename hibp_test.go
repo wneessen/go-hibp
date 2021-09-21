@@ -13,7 +13,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-// TestNewWithHttpTimeout tests the New() function
+// TestNewWithHttpTimeout tests the New() function with the http timeout option
 func TestNewWithHttpTimeout(t *testing.T) {
 	hc := New(WithHttpTimeout(time.Second * 10))
 	if hc == nil {
@@ -23,5 +23,18 @@ func TestNewWithHttpTimeout(t *testing.T) {
 	if hc.to != time.Second*10 {
 		t.Errorf("hibp client timeout option was not set properly. Expected %d, got: %d",
 			time.Second*10, hc.to)
+	}
+}
+
+// TestNewWithPwnedPadding tests the New() function with the PwnedPadding option
+func TestNewWithPwnedPadding(t *testing.T) {
+	hc := New(WithPwnedPadding())
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+	if !hc.PwnedPassApiOpts.WithPadding {
+		t.Errorf("hibp client pwned padding option was not set properly. Expected %v, got: %v",
+			true, hc.PwnedPassApiOpts.WithPadding)
 	}
 }
