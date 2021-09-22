@@ -97,29 +97,10 @@ type ApiDate time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
 func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
-	queryParms := map[string]string{
-		"truncateResponse":  "true",
-		"includeUnverified": "true",
-	}
+	queryParams := b.setBreachOpts(options...)
 	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
 
-	for _, opt := range options {
-		opt(b)
-	}
-
-	if b.domain != "" {
-		queryParms["domain"] = b.domain
-	}
-
-	if b.disableTrunc {
-		queryParms["truncateResponse"] = "false"
-	}
-
-	if b.noUnverified {
-		queryParms["includeUnverified"] = "false"
-	}
-
-	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParms)
+	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -147,6 +128,44 @@ func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 	return breachList, hr, nil
 }
 
+// BreachByName returns a single breached site based on its name
+func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *http.Response, error) {
+	queryParams := b.setBreachOpts(options...)
+
+	if n == "" {
+		return nil, nil, fmt.Errorf("no breach name given")
+	}
+
+	apiUrl := fmt.Sprintf("%s/breach/%s", BaseUrl, n)
+
+	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParams)
+	if err != nil {
+		return nil, nil, err
+	}
+	hr, err := b.hibp.hc.Do(hreq)
+	if err != nil {
+		return nil, hr, err
+	}
+	if hr.StatusCode != 200 {
+		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s", hr.Status)
+	}
+	defer func() {
+		_ = hr.Body.Close()
+	}()
+
+	hb, err := io.ReadAll(hr.Body)
+	if err != nil {
+		return nil, hr, err
+	}
+
+	var breachDetails *Breach
+	if err := json.Unmarshal(hb, &breachDetails); err != nil {
+		return nil, hr, err
+	}
+
+	return breachDetails, hr, nil
+}
+
 // WithDomain sets the domain filter for the breaches API
 func WithDomain(d string) BreachOption {
 	return func(b *BreachApi) {
@@ -158,6 +177,13 @@ func WithDomain(d string) BreachOption {
 func WithoutTruncate() BreachOption {
 	return func(b *BreachApi) {
 		b.disableTrunc = true
+	}
+}
+
+// WithoutUnverified suppress unverified breaches from the query
+func WithoutUnverified() BreachOption {
+	return func(b *BreachApi) {
+		b.noUnverified = true
 	}
 }
 
@@ -181,4 +207,30 @@ func (d *ApiDate) UnmarshalJSON(s []byte) error {
 // Time adds a Time() method to the ApiDate converted time.Time type
 func (d ApiDate) Time() time.Time {
 	return time.Time(d)
+}
+
+// setBreachOpts returns a map of default settings and overridden values from different BreachOption
+func (b *BreachApi) setBreachOpts(options ...BreachOption) map[string]string {
+	queryParams := map[string]string{
+		"truncateResponse":  "true",
+		"includeUnverified": "true",
+	}
+
+	for _, opt := range options {
+		opt(b)
+	}
+
+	if b.domain != "" {
+		queryParams["domain"] = b.domain
+	}
+
+	if b.disableTrunc {
+		queryParams["truncateResponse"] = "false"
+	}
+
+	if b.noUnverified {
+		queryParams["includeUnverified"] = "false"
+	}
+
+	return queryParams
 }
