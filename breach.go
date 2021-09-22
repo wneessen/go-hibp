@@ -3,7 +3,6 @@ package hibp
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -100,7 +99,7 @@ func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 	queryParams := b.setBreachOpts(options...)
 	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
 
-	hb, hr, err := b.apiCall(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,7 +121,7 @@ func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *h
 	}
 
 	apiUrl := fmt.Sprintf("%s/breach/%s", BaseUrl, n)
-	hb, hr, err := b.apiCall(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,7 +138,7 @@ func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *h
 // with all registered data classes known to HIBP
 func (b *BreachApi) DataClasses() ([]string, *http.Response, error) {
 	apiUrl := fmt.Sprintf("%s/dataclasses", BaseUrl)
-	hb, hr, err := b.apiCall(http.MethodGet, apiUrl, nil)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,7 +160,7 @@ func (b *BreachApi) BreachedAccount(a string, options ...BreachOption) ([]*Breac
 	}
 
 	apiUrl := fmt.Sprintf("%s/breachedaccount/%s", BaseUrl, a)
-	hb, hr, err := b.apiCall(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,31 +244,4 @@ func (b *BreachApi) setBreachOpts(options ...BreachOption) map[string]string {
 	}
 
 	return queryParams
-}
-
-// apiCall performs the API call to the breaches API and returns the HTTP response body JSON as
-// byte array
-func (b *BreachApi) apiCall(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
-	hreq, err := b.hibp.HttpReq(m, p, q)
-	if err != nil {
-		return nil, nil, err
-	}
-	hr, err := b.hibp.hc.Do(hreq)
-	if err != nil {
-		return nil, hr, err
-	}
-	defer func() {
-		_ = hr.Body.Close()
-	}()
-
-	hb, err := io.ReadAll(hr.Body)
-	if err != nil {
-		return nil, hr, err
-	}
-
-	if hr.StatusCode != 200 {
-		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s - %s", hr.Status, hb)
-	}
-
-	return hb, hr, nil
 }

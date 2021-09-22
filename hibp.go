@@ -3,14 +3,16 @@ package hibp
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 )
 
 // Version represents the version of this package
-const Version = "0.1.3"
+const Version = "0.1.4"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
@@ -22,10 +24,11 @@ const DefaultUserAgent = `go-hibp v` + Version // + ` - https://github.com/wnees
 
 // Client is the HIBP client object
 type Client struct {
-	hc *http.Client  // HTTP client to perform the API requests
-	to time.Duration // HTTP client timeout
-	ak string        // HIBP API key
-	ua string        // User agent string for the HTTP client
+	hc       *http.Client  // HTTP client to perform the API requests
+	to       time.Duration // HTTP client timeout
+	ak       string        // HIBP API key
+	ua       string        // User agent string for the HTTP client
+	rlNoFail bool          // Controls wether the HTTP client should fail or sleep in case the rate limiting hits
 
 	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
 	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
@@ -94,6 +97,13 @@ func WithUserAgent(a string) Option {
 	}
 }
 
+// WithRateLimitNoFail let's the HTTP client sleep in case the API rate limiting hits (Defaults to fail)
+func WithRateLimitNoFail() Option {
+	return func(c *Client) {
+		c.rlNoFail = true
+	}
+}
+
 // HttpReq performs an HTTP request to the corresponding API
 func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
@@ -134,6 +144,43 @@ func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error
 	}
 
 	return hr, nil
+}
+
+// HttpReqBody performs the API call to the given path and returns the response body as byte array
+func (c *Client) HttpReqBody(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
+	hreq, err := c.HttpReq(m, p, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	hr, err := c.hc.Do(hreq)
+	if err != nil {
+		return nil, hr, err
+	}
+	defer func() {
+		_ = hr.Body.Close()
+	}()
+
+	hb, err := io.ReadAll(hr.Body)
+	if err != nil {
+		return nil, hr, err
+	}
+
+	if hr.StatusCode == 429 && c.rlNoFail {
+		headerDelay := hr.Header.Get("Retry-After")
+		delayTime, err := time.ParseDuration(headerDelay + "s")
+		if err != nil {
+			return nil, hr, err
+		}
+		log.Printf("API rate limit hit. Retrying request in %s", delayTime.String())
+		time.Sleep(delayTime)
+		return c.HttpReqBody(m, p, q)
+	}
+
+	if hr.StatusCode != 200 {
+		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s - %s", hr.Status, hb)
+	}
+
+	return hb, hr, nil
 }
 
 // httpClient returns a custom http client for the HIBP Client object

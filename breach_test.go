@@ -218,3 +218,51 @@ func TestBreachedAccount(t *testing.T) {
 		})
 	}
 }
+
+// TestBreachedAccountWithoutTruncate tests the BreachedAccount() method of the breaches API with the
+// truncateResponse option set to false
+func TestBreachedAccountWithoutTruncate(t *testing.T) {
+	testTable := []struct {
+		testName     string
+		accountName  string
+		breachName   string
+		breachDomain string
+		shouldFail   bool
+	}{
+		{"account-exists is breached once", "account-exists", "Adobe",
+			"adobe.com", false},
+		{"multiple-breaches is breached multiple times", "multiple-breaches", "Adobe",
+			"adobe.com", false},
+		{"opt-out is not breached", "opt-out", "", "", true},
+	}
+
+	hc := New(WithApiKey(os.Getenv("HIBP_API_KEY")), WithRateLimitNoFail())
+	if hc == nil {
+		t.Error("failed to create HIBP client")
+		return
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.testName, func(t *testing.T) {
+			breachDetails, _, err := hc.BreachApi.BreachedAccount(
+				fmt.Sprintf("%s@hibp-integration-tests.com", tc.accountName),
+				WithoutTruncate())
+			if err != nil && !tc.shouldFail {
+				t.Error(err)
+				return
+			}
+
+			for _, b := range breachDetails {
+				if tc.breachName != b.Name {
+					t.Errorf("breach name for the account %q does not match. expected: %q, got: %q",
+						tc.accountName, tc.breachName, b.Name)
+				}
+				if tc.breachDomain != b.Domain {
+					t.Errorf("breach domain for the account %q does not match. expected: %q, got: %q",
+						tc.accountName, tc.breachDomain, b.Domain)
+				}
+				break
+			}
+		})
+	}
+}
