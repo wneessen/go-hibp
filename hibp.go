@@ -12,7 +12,7 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "0.1.5"
+const Version = "1.0.0"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
@@ -36,7 +36,8 @@ type Client struct {
 	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
 	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
 
-	BreachApi *BreachApi // Reference to the BreachApi API
+	BreachApi *BreachApi // Reference to the BreachApi
+	PasteApi  *PasteApi  // Reference to the PasteApi
 }
 
 // Option is a function that is used for grouping of Client options.
@@ -65,6 +66,7 @@ func New(options ...Option) Client {
 	// Associate the different HIBP service APIs with the Client
 	c.PwnedPassApi = &PwnedPassApi{hibp: &c}
 	c.BreachApi = &BreachApi{hibp: &c}
+	c.PasteApi = &PasteApi{hibp: &c}
 
 	return c
 }
