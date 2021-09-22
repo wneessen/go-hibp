@@ -5,8 +5,6 @@
 This Go package provides an simple to use interface to the excellent 
 "[Have I Been Pwned](https://haveibeenpwned.com/API/v3)" (HIBP) API by Troy Hunt.
 
-**Completeness:** This packages is still WIP. So far the "Pwned Passwords" API and parts of the "Breaches" 
-API have been implemented.
 
 ## Usage
 Have a look at the [GoDocs Reference](https://pkg.go.dev/github.com/wneessen/go-hibp) for details on how to implement 
