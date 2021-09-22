@@ -251,8 +251,13 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 				t.Error(err)
 				return
 			}
+			if len(breachDetails) == 0 && !tc.shouldFail {
+				t.Errorf("breach details for account %q are expected but none were returned", tc.accountName)
+				return
+			}
 
-			for _, b := range breachDetails {
+			if len(breachDetails) > 0 {
+				b := breachDetails[0]
 				if tc.breachName != b.Name {
 					t.Errorf("breach name for the account %q does not match. expected: %q, got: %q",
 						tc.accountName, tc.breachName, b.Name)
@@ -261,7 +266,6 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 					t.Errorf("breach domain for the account %q does not match. expected: %q, got: %q",
 						tc.accountName, tc.breachDomain, b.Domain)
 				}
-				return
 			}
 		})
 	}
