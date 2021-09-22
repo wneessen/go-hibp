@@ -99,7 +99,7 @@ func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 	queryParams := b.setBreachOpts(options...)
 	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
 
-	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpResBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,7 +121,7 @@ func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *h
 	}
 
 	apiUrl := fmt.Sprintf("%s/breach/%s", BaseUrl, n)
-	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpResBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -138,7 +138,7 @@ func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *h
 // with all registered data classes known to HIBP
 func (b *BreachApi) DataClasses() ([]string, *http.Response, error) {
 	apiUrl := fmt.Sprintf("%s/dataclasses", BaseUrl)
-	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, nil)
+	hb, hr, err := b.hibp.HttpResBody(http.MethodGet, apiUrl, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -160,7 +160,7 @@ func (b *BreachApi) BreachedAccount(a string, options ...BreachOption) ([]*Breac
 	}
 
 	apiUrl := fmt.Sprintf("%s/breachedaccount/%s", BaseUrl, a)
-	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpResBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}

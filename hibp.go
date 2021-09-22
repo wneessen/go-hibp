@@ -24,11 +24,14 @@ const DefaultUserAgent = `go-hibp v` + Version // + ` - https://github.com/wnees
 
 // Client is the HIBP client object
 type Client struct {
-	hc       *http.Client  // HTTP client to perform the API requests
-	to       time.Duration // HTTP client timeout
-	ak       string        // HIBP API key
-	ua       string        // User agent string for the HTTP client
-	rlNoFail bool          // Controls wether the HTTP client should fail or sleep in case the rate limiting hits
+	hc *http.Client  // HTTP client to perform the API requests
+	to time.Duration // HTTP client timeout
+	ak string        // HIBP API key
+	ua string        // User agent string for the HTTP client
+
+	// If set to true, the HTTP client will sleep instead of failing in case the HTTP 429
+	// rate limit hits a request
+	rlSleep bool
 
 	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
 	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
@@ -97,10 +100,10 @@ func WithUserAgent(a string) Option {
 	}
 }
 
-// WithRateLimitNoFail let's the HTTP client sleep in case the API rate limiting hits (Defaults to fail)
-func WithRateLimitNoFail() Option {
+// WithRateLimitSleep let's the HTTP client sleep in case the API rate limiting hits (Defaults to fail)
+func WithRateLimitSleep() Option {
 	return func(c *Client) {
-		c.rlNoFail = true
+		c.rlSleep = true
 	}
 }
 
@@ -146,8 +149,8 @@ func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error
 	return hr, nil
 }
 
-// HttpReqBody performs the API call to the given path and returns the response body as byte array
-func (c *Client) HttpReqBody(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
+// HttpResBody performs the API call to the given path and returns the response body as byte array
+func (c *Client) HttpResBody(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
 	hreq, err := c.HttpReq(m, p, q)
 	if err != nil {
 		return nil, nil, err
@@ -165,7 +168,7 @@ func (c *Client) HttpReqBody(m string, p string, q map[string]string) ([]byte, *
 		return nil, hr, err
 	}
 
-	if hr.StatusCode == 429 && c.rlNoFail {
+	if hr.StatusCode == 429 && c.rlSleep {
 		headerDelay := hr.Header.Get("Retry-After")
 		delayTime, err := time.ParseDuration(headerDelay + "s")
 		if err != nil {
@@ -173,7 +176,7 @@ func (c *Client) HttpReqBody(m string, p string, q map[string]string) ([]byte, *
 		}
 		log.Printf("API rate limit hit. Retrying request in %s", delayTime.String())
 		time.Sleep(delayTime)
-		return c.HttpReqBody(m, p, q)
+		return c.HttpResBody(m, p, q)
 	}
 
 	if hr.StatusCode != 200 {

@@ -244,7 +244,7 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey), WithRateLimitNoFail())
+	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
 	if hc == nil {
 		t.Error("failed to create HIBP client")
 		return
