@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	hibp "github.com/wneessen/go-hibp"
+	"github.com/wneessen/go-hibp"
 )
 
 func main() {

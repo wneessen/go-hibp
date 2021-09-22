@@ -1,6 +1,7 @@
 package hibp
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -9,6 +10,14 @@ import (
 // TestNew tests the New() function
 func TestNew(t *testing.T) {
 	hc := New()
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+	}
+}
+
+// TestNewWithNil tests the New() function with a nil option
+func TestNewWithNil(t *testing.T) {
+	hc := New(nil)
 	if hc == nil {
 		t.Errorf("hibp client creation failed")
 	}
@@ -51,5 +60,29 @@ func TestNewWithApiKey(t *testing.T) {
 	if hc.ak != apiKey {
 		t.Errorf("hibp client API key was not set properly. Expected %s, got: %s",
 			apiKey, hc.ak)
+	}
+}
+
+// TestNewWithUserAgent tests the New() function with a custom user agent
+func TestNewWithUserAgent(t *testing.T) {
+	hc := New()
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+	if hc.ua != DefaultUserAgent {
+		t.Errorf("hibp client default user agent was not set properly. Expected %s, got: %s",
+			DefaultUserAgent, hc.ua)
+	}
+
+	custUA := fmt.Sprintf("customUA v%s", Version)
+	hc = New(WithUserAgent(custUA))
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+	if hc.ua != custUA {
+		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
+			custUA, hc.ua)
 	}
 }

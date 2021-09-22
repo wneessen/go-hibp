@@ -3,7 +3,6 @@ package hibp
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -100,24 +99,9 @@ func (b *BreachApi) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 	queryParams := b.setBreachOpts(options...)
 	apiUrl := fmt.Sprintf("%s/breaches", BaseUrl)
 
-	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
-	}
-	hr, err := b.hibp.hc.Do(hreq)
-	if err != nil {
-		return nil, hr, err
-	}
-	if hr.StatusCode != 200 {
-		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s", hr.Status)
-	}
-	defer func() {
-		_ = hr.Body.Close()
-	}()
-
-	hb, err := io.ReadAll(hr.Body)
-	if err != nil {
-		return nil, hr, err
 	}
 
 	var breachList []*Breach
@@ -137,28 +121,51 @@ func (b *BreachApi) BreachByName(n string, options ...BreachOption) (*Breach, *h
 	}
 
 	apiUrl := fmt.Sprintf("%s/breach/%s", BaseUrl, n)
-
-	hreq, err := b.hibp.HttpReq(http.MethodGet, apiUrl, queryParams)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
 	if err != nil {
 		return nil, nil, err
 	}
-	hr, err := b.hibp.hc.Do(hreq)
-	if err != nil {
-		return nil, hr, err
-	}
-	if hr.StatusCode != 200 {
-		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s", hr.Status)
-	}
-	defer func() {
-		_ = hr.Body.Close()
-	}()
-
-	hb, err := io.ReadAll(hr.Body)
-	if err != nil {
-		return nil, hr, err
-	}
 
 	var breachDetails *Breach
+	if err := json.Unmarshal(hb, &breachDetails); err != nil {
+		return nil, hr, err
+	}
+
+	return breachDetails, hr, nil
+}
+
+// DataClasses are attribute of a record compromised in a breach. This method returns a list of strings
+// with all registered data classes known to HIBP
+func (b *BreachApi) DataClasses() ([]string, *http.Response, error) {
+	apiUrl := fmt.Sprintf("%s/dataclasses", BaseUrl)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var dataClasses []string
+	if err := json.Unmarshal(hb, &dataClasses); err != nil {
+		return nil, hr, err
+	}
+
+	return dataClasses, hr, nil
+}
+
+// BreachedAccount returns a single breached site based on its name
+func (b *BreachApi) BreachedAccount(a string, options ...BreachOption) ([]*Breach, *http.Response, error) {
+	queryParams := b.setBreachOpts(options...)
+
+	if a == "" {
+		return nil, nil, fmt.Errorf("no account id given")
+	}
+
+	apiUrl := fmt.Sprintf("%s/breachedaccount/%s", BaseUrl, a)
+	hb, hr, err := b.hibp.HttpReqBody(http.MethodGet, apiUrl, queryParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var breachDetails []*Breach
 	if err := json.Unmarshal(hb, &breachDetails); err != nil {
 		return nil, hr, err
 	}
@@ -174,6 +181,7 @@ func WithDomain(d string) BreachOption {
 }
 
 // WithoutTruncate disables the truncateResponse parameter in the breaches API
+// This option only influences the BreachedAccount method
 func WithoutTruncate() BreachOption {
 	return func(b *BreachApi) {
 		b.disableTrunc = true
@@ -217,6 +225,9 @@ func (b *BreachApi) setBreachOpts(options ...BreachOption) map[string]string {
 	}
 
 	for _, opt := range options {
+		if opt == nil {
+			continue
+		}
 		opt(b)
 	}
 
