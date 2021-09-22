@@ -62,3 +62,74 @@ func TestBreachesWithDomain(t *testing.T) {
 		})
 	}
 }
+
+// TestBreachesWithoutUnverified tests the Breaches() method of the breaches API with the unverified parameter
+func TestBreachesWithoutUnverified(t *testing.T) {
+	testTable := []struct {
+		testName   string
+		domain     string
+		isBreached bool
+		isVerified bool
+	}{
+		{"adobe.com is breached and verified", "adobe.com", true, true},
+		{"parapa.mail.ru is breached and verified", "parapa.mail.ru", true, true},
+		{"xiaomi.cn is breached but not verified", "xiaomi.cn", true, false},
+	}
+
+	hc := New()
+	if hc == nil {
+		t.Error("failed to create HIBP client")
+		return
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.testName, func(t *testing.T) {
+			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain), WithoutUnverified())
+			if err != nil {
+				t.Error(err)
+			}
+
+			if breachList == nil && tc.isVerified && tc.isBreached {
+				t.Errorf("domain %s is expected to be breached, but returned 0 results.",
+					tc.domain)
+			}
+		})
+	}
+}
+
+// TestBreachByName tests the BreachByName() method of the breaches API for a specific domain
+func TestBreachByName(t *testing.T) {
+	testTable := []struct {
+		testName   string
+		breachName string
+		isBreached bool
+		shouldFail bool
+	}{
+		{"Adobe is a known breach", "Adobe", true, false},
+		{"Example is not a known breach", "Example", false, true},
+	}
+
+	hc := New()
+	if hc == nil {
+		t.Error("failed to create HIBP client")
+		return
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.testName, func(t *testing.T) {
+			breachDetails, _, err := hc.BreachApi.BreachByName(tc.breachName)
+			if err != nil && !tc.shouldFail {
+				t.Error(err)
+			}
+
+			if breachDetails == nil && tc.isBreached {
+				t.Errorf("breach with the name %q is expected to be breached, but returned 0 results.",
+					tc.breachName)
+			}
+			if breachDetails != nil && !tc.isBreached {
+				t.Errorf("breach with the name %q is expected to be not breached, but returned breach details.",
+					tc.breachName)
+			}
+		})
+	}
+}
