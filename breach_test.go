@@ -1,6 +1,8 @@
 package hibp
 
 import (
+	"fmt"
+	"os"
 	"testing"
 )
 
@@ -13,6 +15,23 @@ func TestBreaches(t *testing.T) {
 	}
 
 	breachList, _, err := hc.BreachApi.Breaches()
+	if err != nil {
+		t.Error(err)
+	}
+	if breachList != nil && len(breachList) <= 0 {
+		t.Error("breaches list returned 0 results")
+	}
+}
+
+// TestBreachesWithNil tests the Breaches() method of the breaches API with a nil option
+func TestBreachesWithNil(t *testing.T) {
+	hc := New()
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+
+	breachList, _, err := hc.BreachApi.Breaches(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -129,6 +148,72 @@ func TestBreachByName(t *testing.T) {
 			if breachDetails != nil && !tc.isBreached {
 				t.Errorf("breach with the name %q is expected to be not breached, but returned breach details.",
 					tc.breachName)
+			}
+		})
+	}
+}
+
+// TestDataClasses tests the DataClasses() method of the breaches API
+func TestDataClasses(t *testing.T) {
+	hc := New()
+	if hc == nil {
+		t.Errorf("hibp client creation failed")
+		return
+	}
+
+	classList, _, err := hc.BreachApi.DataClasses()
+	if err != nil {
+		t.Error(err)
+	}
+	if classList != nil && len(classList) <= 0 {
+		t.Error("breaches list returned 0 results")
+	}
+}
+
+// TestBreachedAccount tests the BreachedAccount() method of the breaches API
+func TestBreachedAccount(t *testing.T) {
+	testTable := []struct {
+		testName          string
+		accountName       string
+		isBreached        bool
+		moreThanOneBreach bool
+	}{
+		{"account-exists is breached once", "account-exists", true,
+			false},
+		{"multiple-breaches is breached multiple times", "multiple-breaches",
+			true, true},
+		{"opt-out is not breached", "opt-out", false, false},
+	}
+
+	hc := New(WithApiKey(os.Getenv("HIBP_API_KEY")))
+	if hc == nil {
+		t.Error("failed to create HIBP client")
+		return
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.testName, func(t *testing.T) {
+			breachDetails, _, err := hc.BreachApi.BreachedAccount(
+				fmt.Sprintf("%s@hibp-integration-tests.com", tc.accountName))
+			if err != nil && tc.isBreached {
+				t.Error(err)
+			}
+
+			if breachDetails == nil && tc.isBreached {
+				t.Errorf("breach for the account %q is expected, but returned 0 results.",
+					tc.accountName)
+			}
+			if breachDetails != nil && !tc.isBreached {
+				t.Errorf("breach for the account %q is expected to be not breached, but returned breach details.",
+					tc.accountName)
+			}
+			if breachDetails != nil && tc.moreThanOneBreach && len(breachDetails) <= 1 {
+				t.Errorf("breach for the account %q is expected to be breached multiple, but returned %d breaches.",
+					tc.accountName, len(breachDetails))
+			}
+			if breachDetails != nil && !tc.moreThanOneBreach && len(breachDetails) > 1 {
+				t.Errorf("breach for the account %q is expected to be breached once, but returned %d breaches.",
+					tc.accountName, len(breachDetails))
 			}
 		})
 	}

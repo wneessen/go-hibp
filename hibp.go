@@ -3,7 +3,6 @@ package hibp
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,16 +10,22 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "0.1.2"
+const Version = "0.1.3"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
+
+// DefaultUserAgent defines the default UA string for the HTTP client
+// Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
+// not allowing multiple slashes
+const DefaultUserAgent = `go-hibp v` + Version // + ` - https://github.com/wneessen/go-hibp`
 
 // Client is the HIBP client object
 type Client struct {
 	hc *http.Client  // HTTP client to perform the API requests
 	to time.Duration // HTTP client timeout
 	ak string        // HIBP API key
+	ua string        // User agent string for the HTTP client
 
 	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
 	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
@@ -38,9 +43,13 @@ func New(options ...Option) *Client {
 	// Set defaults
 	c.to = time.Second * 5
 	c.PwnedPassApiOpts = &PwnedPasswordOptions{}
+	c.ua = DefaultUserAgent
 
 	// Set additional options
 	for _, opt := range options {
+		if opt == nil {
+			continue
+		}
 		opt(c)
 	}
 
@@ -75,6 +84,16 @@ func WithPwnedPadding() Option {
 	}
 }
 
+// WithUserAgent sets a custom user agent string for the HTTP client
+func WithUserAgent(a string) Option {
+	if a == "" {
+		return func(c *Client) {}
+	}
+	return func(c *Client) {
+		c.ua = a
+	}
+}
+
 // HttpReq performs an HTTP request to the corresponding API
 func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
@@ -106,12 +125,10 @@ func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error
 	}
 
 	hr.Header.Set("Accept", "application/json")
-	hr.Header.Set("User-Agent", fmt.Sprintf("go-hibp v%s - https://github.com/wneessen/go-hibp", Version))
-
+	hr.Header.Set("user-agent", c.ua)
 	if c.ak != "" {
 		hr.Header.Set("hibp-api-key", c.ak)
 	}
-
 	if c.PwnedPassApiOpts.WithPadding {
 		hr.Header.Set("Add-Padding", "true")
 	}
