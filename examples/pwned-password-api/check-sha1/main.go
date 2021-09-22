@@ -2,16 +2,13 @@ package main
 
 import (
 	"fmt"
-	hibp "github.com/wneessen/go-hibp"
+	"github.com/wneessen/go-hibp"
 )
 
 func main() {
-	hc := hibp.New(hibp.WithPwnedPadding())
-	if hc == nil {
-		panic("failed to create HIBP client")
-	}
-
-	m, _, err := hc.PwnedPassApi.CheckPassword("test")
+	hc := hibp.New()
+	pwHash := "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" // represents the PW: "test"
+	m, _, err := hc.PwnedPassApi.CheckSHA1(pwHash)
 	if err != nil {
 		panic(err)
 	}

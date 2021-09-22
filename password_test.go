@@ -16,7 +16,6 @@ func TestPwnedPasswordString(t *testing.T) {
 			"F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX", false},
 	}
 	hc := New()
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			m, _, err := hc.PwnedPassApi.CheckPassword(tc.pwString)
@@ -47,11 +46,6 @@ func TestPwnedPasswordHash(t *testing.T) {
 			"90efc095c82eab44e882fda507cfab1a2cd31fc0", false},
 	}
 	hc := New()
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			m, _, err := hc.PwnedPassApi.CheckSHA1(tc.pwHash)

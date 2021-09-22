@@ -9,11 +9,6 @@ import (
 // TestBreaches tests the Breaches() method of the breaches API
 func TestBreaches(t *testing.T) {
 	hc := New()
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
-
 	breachList, _, err := hc.BreachApi.Breaches()
 	if err != nil {
 		t.Error(err)
@@ -26,11 +21,6 @@ func TestBreaches(t *testing.T) {
 // TestBreachesWithNil tests the Breaches() method of the breaches API with a nil option
 func TestBreachesWithNil(t *testing.T) {
 	hc := New()
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
-
 	breachList, _, err := hc.BreachApi.Breaches(nil)
 	if err != nil {
 		t.Error(err)
@@ -52,11 +42,6 @@ func TestBreachesWithDomain(t *testing.T) {
 	}
 
 	hc := New()
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain))
@@ -96,11 +81,6 @@ func TestBreachesWithoutUnverified(t *testing.T) {
 	}
 
 	hc := New()
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain), WithoutUnverified())
@@ -129,11 +109,6 @@ func TestBreachByName(t *testing.T) {
 	}
 
 	hc := New()
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachDetails, _, err := hc.BreachApi.BreachByName(tc.breachName)
@@ -156,11 +131,6 @@ func TestBreachByName(t *testing.T) {
 // TestDataClasses tests the DataClasses() method of the breaches API
 func TestDataClasses(t *testing.T) {
 	hc := New()
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
-
 	classList, _, err := hc.BreachApi.DataClasses()
 	if err != nil {
 		t.Error(err)
@@ -190,11 +160,6 @@ func TestBreachedAccount(t *testing.T) {
 		t.SkipNow()
 	}
 	hc := New(WithApiKey(apiKey))
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachDetails, _, err := hc.BreachApi.BreachedAccount(
@@ -245,11 +210,6 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		t.SkipNow()
 	}
 	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
-	if hc == nil {
-		t.Error("failed to create HIBP client")
-		return
-	}
-
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachDetails, _, err := hc.BreachApi.BreachedAccount(

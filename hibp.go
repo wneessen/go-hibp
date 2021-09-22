@@ -12,7 +12,7 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "0.1.4"
+const Version = "0.1.5"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
@@ -43,8 +43,8 @@ type Client struct {
 type Option func(*Client)
 
 // New creates and returns a new HIBP client object
-func New(options ...Option) *Client {
-	c := &Client{}
+func New(options ...Option) Client {
+	c := Client{}
 
 	// Set defaults
 	c.to = time.Second * 5
@@ -56,15 +56,15 @@ func New(options ...Option) *Client {
 		if opt == nil {
 			continue
 		}
-		opt(c)
+		opt(&c)
 	}
 
 	// Add a http client to the Client object
 	c.hc = httpClient(c.to)
 
 	// Associate the different HIBP service APIs with the Client
-	c.PwnedPassApi = &PwnedPassApi{hibp: c}
-	c.BreachApi = &BreachApi{hibp: c}
+	c.PwnedPassApi = &PwnedPassApi{hibp: &c}
+	c.BreachApi = &BreachApi{hibp: &c}
 
 	return c
 }
