@@ -2,15 +2,11 @@ package main
 
 import (
 	"fmt"
-	hibp "github.com/wneessen/go-hibp"
+	"github.com/wneessen/go-hibp"
 )
 
 func main() {
 	hc := hibp.New()
-	if hc == nil {
-		panic("failed to create HIBP client")
-	}
-
 	bl, _, err := hc.BreachApi.Breaches()
 	if err != nil {
 		panic(err)

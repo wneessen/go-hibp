@@ -10,7 +10,7 @@ import (
 // TestNew tests the New() function
 func TestNew(t *testing.T) {
 	hc := New()
-	if hc == nil {
+	if *hc.PwnedPassApi.hibp != hc {
 		t.Errorf("hibp client creation failed")
 	}
 }
@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 // TestNewWithNil tests the New() function with a nil option
 func TestNewWithNil(t *testing.T) {
 	hc := New(nil)
-	if hc == nil {
+	if *hc.PwnedPassApi.hibp != hc {
 		t.Errorf("hibp client creation failed")
 	}
 }
@@ -26,10 +26,6 @@ func TestNewWithNil(t *testing.T) {
 // TestNewWithHttpTimeout tests the New() function with the http timeout option
 func TestNewWithHttpTimeout(t *testing.T) {
 	hc := New(WithHttpTimeout(time.Second * 10))
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
 	if hc.to != time.Second*10 {
 		t.Errorf("hibp client timeout option was not set properly. Expected %d, got: %d",
 			time.Second*10, hc.to)
@@ -39,10 +35,6 @@ func TestNewWithHttpTimeout(t *testing.T) {
 // TestNewWithPwnedPadding tests the New() function with the PwnedPadding option
 func TestNewWithPwnedPadding(t *testing.T) {
 	hc := New(WithPwnedPadding())
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
 	if !hc.PwnedPassApiOpts.WithPadding {
 		t.Errorf("hibp client pwned padding option was not set properly. Expected %v, got: %v",
 			true, hc.PwnedPassApiOpts.WithPadding)
@@ -53,10 +45,6 @@ func TestNewWithPwnedPadding(t *testing.T) {
 func TestNewWithApiKey(t *testing.T) {
 	apiKey := os.Getenv("HIBP_API_KEY")
 	hc := New(WithApiKey(apiKey))
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
 	if hc.ak != apiKey {
 		t.Errorf("hibp client API key was not set properly. Expected %s, got: %s",
 			apiKey, hc.ak)
@@ -66,10 +54,6 @@ func TestNewWithApiKey(t *testing.T) {
 // TestNewWithUserAgent tests the New() function with a custom user agent
 func TestNewWithUserAgent(t *testing.T) {
 	hc := New()
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
 	if hc.ua != DefaultUserAgent {
 		t.Errorf("hibp client default user agent was not set properly. Expected %s, got: %s",
 			DefaultUserAgent, hc.ua)
@@ -77,10 +61,6 @@ func TestNewWithUserAgent(t *testing.T) {
 
 	custUA := fmt.Sprintf("customUA v%s", Version)
 	hc = New(WithUserAgent(custUA))
-	if hc == nil {
-		t.Errorf("hibp client creation failed")
-		return
-	}
 	if hc.ua != custUA {
 		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
 			custUA, hc.ua)

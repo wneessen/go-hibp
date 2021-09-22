@@ -7,10 +7,6 @@ import (
 
 func main() {
 	hc := hibp.New()
-	if hc == nil {
-		panic("failed to create HIBP client")
-	}
-
 	bd, _, err := hc.BreachApi.BreachByName("Adobe")
 	if err != nil {
 		panic(err)
