@@ -185,7 +185,11 @@ func TestBreachedAccount(t *testing.T) {
 		{"opt-out is not breached", "opt-out", false, false},
 	}
 
-	hc := New(WithApiKey(os.Getenv("HIBP_API_KEY")))
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
+	hc := New(WithApiKey(apiKey))
 	if hc == nil {
 		t.Error("failed to create HIBP client")
 		return
@@ -236,7 +240,11 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		{"opt-out is not breached", "opt-out", "", "", true},
 	}
 
-	hc := New(WithApiKey(os.Getenv("HIBP_API_KEY")), WithRateLimitNoFail())
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
+	hc := New(WithApiKey(apiKey), WithRateLimitNoFail())
 	if hc == nil {
 		t.Error("failed to create HIBP client")
 		return
