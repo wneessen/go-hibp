@@ -261,7 +261,7 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 					t.Errorf("breach domain for the account %q does not match. expected: %q, got: %q",
 						tc.accountName, tc.breachDomain, b.Domain)
 				}
-				break
+				return
 			}
 		})
 	}
