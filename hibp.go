@@ -12,7 +12,7 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "1.0.0"
+const Version = "1.0.1"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"
@@ -20,7 +20,7 @@ const BaseUrl = "https://haveibeenpwned.com/api/v3"
 // DefaultUserAgent defines the default UA string for the HTTP client
 // Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
 // not allowing multiple slashes
-const DefaultUserAgent = `go-hibp v` + Version // + ` - https://github.com/wneessen/go-hibp`
+const DefaultUserAgent = `go-hibp v` + Version + ` (https://github.com/wneessen/go-hibp)`
 
 // Client is the HIBP client object
 type Client struct {
