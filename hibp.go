@@ -95,7 +95,7 @@ func WithPwnedPadding() Option {
 // WithUserAgent sets a custom user agent string for the HTTP client
 func WithUserAgent(a string) Option {
 	if a == "" {
-		return func(c *Client) {}
+		return nil
 	}
 	return func(c *Client) {
 		c.ua = a

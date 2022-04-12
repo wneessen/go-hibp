@@ -65,4 +65,10 @@ func TestNewWithUserAgent(t *testing.T) {
 		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
 			custUA, hc.ua)
 	}
+
+	hc = New(WithUserAgent(""))
+	if hc.ua != DefaultUserAgent {
+		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
+			DefaultUserAgent, hc.ua)
+	}
 }
