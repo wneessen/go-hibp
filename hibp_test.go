@@ -44,7 +44,7 @@ func TestNewWithPwnedPadding(t *testing.T) {
 // TestNewWithApiKey tests the New() function with the API key set
 func TestNewWithApiKey(t *testing.T) {
 	apiKey := os.Getenv("HIBP_API_KEY")
-	hc := New(WithApiKey(apiKey))
+	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
 	if hc.ak != apiKey {
 		t.Errorf("hibp client API key was not set properly. Expected %s, got: %s",
 			apiKey, hc.ak)

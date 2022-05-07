@@ -21,7 +21,7 @@ func TestPasteAccount(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey))
+	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			pasteDetails, _, err := hc.PasteApi.PastedAccount(
