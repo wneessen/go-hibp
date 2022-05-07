@@ -16,8 +16,6 @@ on:
       - 'go.*'
       - '.github/**'
       - 'codecov.yml'
-env:
-  HIBP_API_KEY: ${{ secrets.HIBP_API_KEY }}
 jobs:
   run:
     runs-on: ${{ matrix.os }}
