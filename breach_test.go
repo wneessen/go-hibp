@@ -41,7 +41,7 @@ func TestBreachesWithDomain(t *testing.T) {
 		{"example.com is not breached", "example.com", false},
 	}
 
-	hc := New()
+	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain))
@@ -80,7 +80,7 @@ func TestBreachesWithoutUnverified(t *testing.T) {
 		{"xiaomi.cn is breached but not verified", "xiaomi.cn", true, false},
 	}
 
-	hc := New()
+	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain), WithoutUnverified())
@@ -108,7 +108,7 @@ func TestBreachByName(t *testing.T) {
 		{"Example is not a known breach", "Example", false, true},
 	}
 
-	hc := New()
+	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachDetails, _, err := hc.BreachApi.BreachByName(tc.breachName)
@@ -159,7 +159,7 @@ func TestBreachedAccount(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey))
+	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			breachDetails, _, err := hc.BreachApi.BreachedAccount(
