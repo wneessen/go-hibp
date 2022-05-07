@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - main # or the name of your main branch
-env:
-  HIBP_API_KEY: ${{ secrets.HIBP_API_KEY }}
 jobs:
   build:
     name: Build
