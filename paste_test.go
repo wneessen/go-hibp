@@ -1,7 +1,6 @@
 package hibp
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
@@ -12,9 +11,11 @@ func TestPasteAccount(t *testing.T) {
 		testName    string
 		accountName string
 		isBreached  bool
+		shouldFail  bool
 	}{
-		{"account-exists is breached once", "account-exists", true},
-		{"opt-out is not breached", "opt-out", false},
+		{"account-exists is breached once", "account-exists@hibp-integration-tests.com", true, false},
+		{"opt-out is not breached", "opt-out-breach@hibp-integration-tests.com", false, true},
+		{"empty account name", "", false, true},
 	}
 
 	apiKey := os.Getenv("HIBP_API_KEY")
@@ -24,9 +25,8 @@ func TestPasteAccount(t *testing.T) {
 	hc := New(WithApiKey(apiKey))
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			pasteDetails, _, err := hc.PasteApi.PastedAccount(
-				fmt.Sprintf("%s@hibp-integration-tests.com", tc.accountName))
-			if err != nil && tc.isBreached {
+			pasteDetails, _, err := hc.PasteApi.PastedAccount(tc.accountName)
+			if err != nil && !tc.shouldFail {
 				t.Error(err)
 			}
 

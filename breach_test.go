@@ -198,11 +198,12 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		breachDomain string
 		shouldFail   bool
 	}{
-		{"account-exists is breached once", "account-exists", "Adobe",
+		{"account-exists is breached once", "account-exists@hibp-integration-tests.com", "Adobe",
 			"adobe.com", false},
-		{"multiple-breaches is breached multiple times", "multiple-breaches", "Adobe",
+		{"multiple-breaches is breached multiple times", "multiple-breaches@hibp-integration-tests.com", "Adobe",
 			"adobe.com", false},
-		{"opt-out is not breached", "opt-out", "", "", true},
+		{"opt-out is not breached", "opt-out@hibp-integration-tests.com", "", "", true},
+		{"empty string should fail", "", "", "", true},
 	}
 
 	apiKey := os.Getenv("HIBP_API_KEY")
@@ -212,9 +213,7 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachDetails, _, err := hc.BreachApi.BreachedAccount(
-				fmt.Sprintf("%s@hibp-integration-tests.com", tc.accountName),
-				WithoutTruncate())
+			breachDetails, _, err := hc.BreachApi.BreachedAccount(tc.accountName, WithoutTruncate())
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
 				return
