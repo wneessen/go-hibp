@@ -52,6 +52,9 @@ func (p *PwnedPassApi) CheckSHA1(h string) (*Match, *http.Response, error) {
 // apiCall performs the API call to the Pwned Password API endpoint and returns
 // the http.Response
 func (p *PwnedPassApi) apiCall(h string) ([]Match, *http.Response, error) {
+	if len(h) < 5 {
+		return nil, nil, fmt.Errorf("password hash cannot be shorter than 5 characters")
+	}
 	sh := h[:5]
 	hreq, err := p.hibp.HttpReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", sh),
 		nil)
