@@ -1,4 +1,4 @@
-# go-hibp - Simple Go binding to all 3 APIs of the "Have I Been Pwned" by Troy Hunt
+# go-hibp - Simple Go binding to the "Have I Been Pwned" API
 
 [![GoDoc](https://godoc.org/github.com/wneessen/go-hibp?status.svg)](https://pkg.go.dev/github.com/wneessen/go-hibp) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/wneessen/go-hibp)](https://goreportcard.com/report/github.com/wneessen/go-hibp) 
