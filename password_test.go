@@ -37,20 +37,23 @@ func TestPwnedPasswordString(t *testing.T) {
 // TestPwnedPasswordHash verifies the Pwned Passwords API with the CheckSHA1 method
 func TestPwnedPasswordHash(t *testing.T) {
 	testTable := []struct {
-		testName string
-		pwHash   string
-		isLeaked bool
+		testName   string
+		pwHash     string
+		isLeaked   bool
+		shouldFail bool
 	}{
 		{"weak password 'test123' is expected to be leaked",
-			"7288edd0fc3ffcbe93a0cf06e3568e28521687bc", true},
+			"7288edd0fc3ffcbe93a0cf06e3568e28521687bc", true, false},
 		{"strong, unknown password is expected to be not leaked",
-			"90efc095c82eab44e882fda507cfab1a2cd31fc0", false},
+			"90efc095c82eab44e882fda507cfab1a2cd31fc0", false, false},
+		{"empty string should fail",
+			"", false, true},
 	}
 	hc := New()
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
 			m, _, err := hc.PwnedPassApi.CheckSHA1(tc.pwHash)
-			if err != nil {
+			if err != nil && !tc.shouldFail {
 				t.Error(err)
 				return
 			}
@@ -62,6 +65,24 @@ func TestPwnedPasswordHash(t *testing.T) {
 					m.Count)
 			}
 		})
+	}
+}
+
+// TestPwnedPassApi_apiCall tests the non-public apiCall method (especially for failures that are not
+// tested by the other tests already)
+func TestPwnedPassApi_apiCall(t *testing.T) {
+	hc := New()
+
+	// Should return a 404
+	_, _, err := hc.PwnedPassApi.apiCall("ZZZZZZZZZZZZZZ")
+	if err == nil {
+		t.Errorf("apiCall was supposed to fail, but didn't")
+	}
+
+	// Non allowed characters
+	_, _, err = hc.PwnedPassApi.apiCall(string([]byte{0}))
+	if err == nil {
+		t.Errorf("apiCall was supposed to fail, but didn't")
 	}
 }
 

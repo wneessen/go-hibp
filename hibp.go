@@ -1,4 +1,4 @@
-// Package hibp provides Go binding to all 3 APIs of the "Have I been Pwned" by Troy Hunt
+// Package hibp provides Go binding to all 3 APIs of the "Have I Been Pwned" by Troy Hunt
 package hibp
 
 import (
