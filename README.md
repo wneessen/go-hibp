@@ -11,6 +11,5 @@ This Go package provides an simple to use interface to the excellent
 
 
 ## Usage
-Have a look at the [GoDocs Reference](https://pkg.go.dev/github.com/wneessen/go-hibp) for details on how to implement 
-access to the HIBP API with this package or check out the examples for the different APIs in the [examples](examples)
-directory.
+Check out the [GoDocs Reference](https://pkg.go.dev/github.com/wneessen/go-hibp) for details on how to implement 
+access to the HIBP API with this package. You will also find GoDoc code examples there.
