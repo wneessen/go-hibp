@@ -6,10 +6,11 @@
 [![codecov](https://codecov.io/gh/wneessen/go-hibp/branch/main/graph/badge.svg?token=ST96EC0JHU)](https://codecov.io/gh/wneessen/go-hibp)
 <a href="https://ko-fi.com/D1D24V9IX"><img src="https://uploads-ssl.webflow.com/5c14e387dab576fe667689cf/5cbed8a4ae2b88347c06c923_BuyMeACoffee_blue.png" height="20" alt="buy ma a coffee"></a>
 
-This Go library provides simple and idiomatic bindings to the excellent 
+This Go library provides simple bindings to the excellent 
 "[Have I Been Pwned](https://haveibeenpwned.com/API/v3)" (HIBP) API by Troy Hunt. It implements all 3 APIs
 that are provided by HIBP (Breaches, Pastes, Passwords). API key support for the private API endpoints are 
-supported as well.
+supported as well. go-hibp follows idiomatic Go style and best practice. It's only dependency is the Go Standard 
+Library. 
 
 ## Usage
 The library is fully documented using the execellent GoDoc functionality. Check out the
