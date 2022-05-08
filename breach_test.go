@@ -246,7 +246,7 @@ func ExampleBreachApi_Breaches_getAllBreaches() {
 	if err != nil {
 		panic(err)
 	}
-	if bl != nil && len(bl) != 0 {
+	if len(bl) != 0 {
 		for _, b := range bl {
 			fmt.Printf("Found breach:\n\tName: %s\n\tDomain: %s\n\tBreach date: %s\n\n",
 				b.Name, b.Domain, b.BreachDate.Time().Format("Mon, 2. January 2006"))
@@ -262,7 +262,7 @@ func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
 	if err != nil {
 		panic(err)
 	}
-	if bl != nil && len(bl) != 0 {
+	if len(bl) != 0 {
 		fmt.Printf("Found %d breaches total.\n", len(bl))
 	}
 
@@ -270,7 +270,7 @@ func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
 	if err != nil {
 		panic(err)
 	}
-	if bl != nil && len(bl) != 0 {
+	if len(bl) != 0 {
 		fmt.Printf("Found %d verified breaches total.\n", len(bl))
 	}
 }
