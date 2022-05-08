@@ -1,3 +1,4 @@
+// Package hibp provides Go binding to all 3 APIs of the "Have I been Pwned" by Troy Hunt
 package hibp
 
 import (
@@ -12,7 +13,7 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "1.0.1"
+const Version = "1.0.2"
 
 // BaseUrl is the base URL for the majority of API calls
 const BaseUrl = "https://haveibeenpwned.com/api/v3"

@@ -1,6 +1,7 @@
 package hibp
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -39,5 +40,22 @@ func TestPasteAccount(t *testing.T) {
 					tc.accountName)
 			}
 		})
+	}
+}
+
+// ExamplePasteApi_PastedAccount is a code example to show how to fetch a specific paste
+// based on its name from the HIBP pastes API using the PastedAccount() method
+func ExamplePasteApi_PastedAccount() {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		panic("A API key is required for this API")
+	}
+	hc := New(WithApiKey(apiKey))
+	pd, _, err := hc.PasteApi.PastedAccount("account-exists@hibp-integration-tests.com")
+	if err != nil {
+		panic(err)
+	}
+	for _, p := range pd {
+		fmt.Printf("Your account was part of the %q paste\n", p.Title)
 	}
 }

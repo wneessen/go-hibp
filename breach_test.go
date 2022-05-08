@@ -237,3 +237,73 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		})
 	}
 }
+
+// ExampleBreachApi_Breaches_getAllBreaches is a code example to show how to fetch all breaches from the
+// HIBP breaches API
+func ExampleBreachApi_Breaches_getAllBreaches() {
+	hc := New()
+	bl, _, err := hc.BreachApi.Breaches()
+	if err != nil {
+		panic(err)
+	}
+	if len(bl) != 0 {
+		for _, b := range bl {
+			fmt.Printf("Found breach:\n\tName: %s\n\tDomain: %s\n\tBreach date: %s\n\n",
+				b.Name, b.Domain, b.BreachDate.Time().Format("Mon, 2. January 2006"))
+		}
+	}
+}
+
+// ExampleBreachApi_Breaches_getAllBreachesNoUnverified is a code example to show how to fetch all breaches from the
+// HIBP breaches API but ignoring unverified breaches
+func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
+	hc := New()
+	bl, _, err := hc.BreachApi.Breaches()
+	if err != nil {
+		panic(err)
+	}
+	if len(bl) != 0 {
+		fmt.Printf("Found %d breaches total.\n", len(bl))
+	}
+
+	bl, _, err = hc.BreachApi.Breaches(WithoutUnverified())
+	if err != nil {
+		panic(err)
+	}
+	if len(bl) != 0 {
+		fmt.Printf("Found %d verified breaches total.\n", len(bl))
+	}
+}
+
+// ExampleBreachApi_BreachByName is a code example to show how to fetch a specific breach
+// from the HIBP breaches API using the BreachByName method
+func ExampleBreachApi_BreachByName() {
+	hc := New()
+	bd, _, err := hc.BreachApi.BreachByName("Adobe")
+	if err != nil {
+		panic(err)
+	}
+	if bd != nil {
+		fmt.Println("Details of the 'Adobe' breach:")
+		fmt.Printf("\tDomain: %s\n", bd.Domain)
+		fmt.Printf("\tBreach date: %s\n", bd.BreachDate.Time().Format("2006-01-02"))
+		fmt.Printf("\tAdded to HIBP: %s\n", bd.AddedDate.String())
+	}
+}
+
+// ExampleBreachApi_BreachedAccount is a code example to show how to fetch a list of breaches
+// for a specific site/account from the HIBP breaches API using the BreachedAccount method
+func ExampleBreachApi_BreachedAccount() {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		panic("A API key is required for this API")
+	}
+	hc := New(WithApiKey(apiKey))
+	bd, _, err := hc.BreachApi.BreachedAccount("multiple-breaches@hibp-integration-tests.com")
+	if err != nil {
+		panic(err)
+	}
+	for _, b := range bd {
+		fmt.Printf("Your account was part of the %q breach\n", b.Name)
+	}
+}
