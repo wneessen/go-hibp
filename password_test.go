@@ -5,16 +5,32 @@ import (
 	"testing"
 )
 
-// TestPwnedPasswordString verifies the Pwned Passwords API with the CheckPassword method
-func TestPwnedPasswordString(t *testing.T) {
+const (
+	// PwStringInsecure is the string representation of an insecure password
+	PwStringInsecure = "test"
+
+	// PwStringSecure is the string representation of an insecure password
+	PwStringSecure = "F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX"
+
+	// PwHashInsecure is the SHA1 checksum of an insecure password
+	// Represents the string: test
+	PwHashInsecure = "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"
+
+	// PwHashSecure is the SHA1 checksum of a secure password
+	// Represents the string: F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX
+	PwHashSecure = "90efc095c82eab44e882fda507cfab1a2cd31fc0"
+)
+
+// TestPwnedPassApi_CheckPassword verifies the Pwned Passwords API with the CheckPassword method
+func TestPwnedPassApi_CheckPassword(t *testing.T) {
 	testTable := []struct {
 		testName string
 		pwString string
 		isLeaked bool
 	}{
-		{"weak password 'test123' is expected to be leaked", "test123", true},
+		{"weak password 'test123' is expected to be leaked", PwStringInsecure, true},
 		{"strong, unknown password is expected to be not leaked",
-			"F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX", false},
+			PwStringSecure, false},
 	}
 	hc := New()
 	for _, tc := range testTable {
@@ -34,18 +50,18 @@ func TestPwnedPasswordString(t *testing.T) {
 	}
 }
 
-// TestPwnedPasswordHash verifies the Pwned Passwords API with the CheckSHA1 method
-func TestPwnedPasswordHash(t *testing.T) {
+// TestPwnedPassApi_CheckSHA1 verifies the Pwned Passwords API with the CheckSHA1 method
+func TestPwnedPassApi_CheckSHA1(t *testing.T) {
 	testTable := []struct {
 		testName   string
 		pwHash     string
 		isLeaked   bool
 		shouldFail bool
 	}{
-		{"weak password 'test123' is expected to be leaked",
-			"7288edd0fc3ffcbe93a0cf06e3568e28521687bc", true, false},
+		{"weak password 'test' is expected to be leaked",
+			PwHashInsecure, true, false},
 		{"strong, unknown password is expected to be not leaked",
-			"90efc095c82eab44e882fda507cfab1a2cd31fc0", false, false},
+			PwHashSecure, false, false},
 		{"empty string should fail",
 			"", false, true},
 	}
@@ -68,21 +84,70 @@ func TestPwnedPasswordHash(t *testing.T) {
 	}
 }
 
-// TestPwnedPassApi_apiCall tests the non-public apiCall method (especially for failures that are not
+// TestPwnedPassApi_ListHashesPrefix tests the ListHashesPrefix method (especially for failures that are not
 // tested by the other tests already)
-func TestPwnedPassApi_apiCall(t *testing.T) {
+func TestPwnedPassApi_ListHashesPrefix(t *testing.T) {
 	hc := New()
 
-	// Should return a 404
-	_, _, err := hc.PwnedPassApi.apiCall("ZZZZZZZZZZZZZZ")
+	// Should return at least 1 restults
+	l, _, err := hc.PwnedPassApi.ListHashesPrefix("a94a8")
+	if err != nil {
+		t.Errorf("ListHashesPrefix was not supposed to fail, but did: %s", err)
+	}
+	if len(l) <= 0 {
+		t.Errorf("ListHashesPrefix was supposed to return a list longer than 0")
+	}
+
+	// Prefix has wrong size
+	_, _, err = hc.PwnedPassApi.ListHashesPrefix("ZZZZZZZZZZZZZZ")
 	if err == nil {
-		t.Errorf("apiCall was supposed to fail, but didn't")
+		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
 	}
 
 	// Non allowed characters
-	_, _, err = hc.PwnedPassApi.apiCall(string([]byte{0}))
+	_, _, err = hc.PwnedPassApi.ListHashesPrefix(string([]byte{0, 0, 0, 0, 0}))
 	if err == nil {
-		t.Errorf("apiCall was supposed to fail, but didn't")
+		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
+	}
+}
+
+// TestPwnedPassApi_ListHashesSHA1 tests the PwnedPassApi.ListHashesSHA1 metethod
+func TestPwnedPassApi_ListHashesSHA1(t *testing.T) {
+	hc := New()
+
+	// List length should be >0
+	l, _, err := hc.PwnedPassApi.ListHashesSHA1(PwHashInsecure)
+	if err != nil {
+		t.Errorf("ListHashesSHA1 was not supposed to fail, but did: %s", err)
+	}
+	if len(l) <= 0 {
+		t.Errorf("ListHashesSHA1 was supposed to return a list longer than 0")
+	}
+
+	// Hash has wrong size
+	_, _, err = hc.PwnedPassApi.ListHashesSHA1(PwStringInsecure)
+	if err == nil {
+		t.Errorf("ListHashesSHA1 was supposed to fail, but didn't")
+	}
+}
+
+// TestPwnedPassApi_ListHashesPassword tests the PwnedPassApi.ListHashesPassword metethod
+func TestPwnedPassApi_ListHashesPassword(t *testing.T) {
+	hc := New()
+
+	// List length should be >0
+	l, _, err := hc.PwnedPassApi.ListHashesPassword(PwStringInsecure)
+	if err != nil {
+		t.Errorf("ListHashesPassword was not supposed to fail, but did: %s", err)
+	}
+	if len(l) <= 0 {
+		t.Errorf("ListHashesPassword was supposed to return a list longer than 0")
+	}
+
+	// Empty string has no checksum
+	_, _, err = hc.PwnedPassApi.ListHashesSHA1("")
+	if err == nil {
+		t.Errorf("ListHashesPassword was supposed to fail, but didn't")
 	}
 }
 
