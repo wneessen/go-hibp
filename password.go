@@ -118,6 +118,9 @@ func (p *PwnedPassApi) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 		if err != nil {
 			continue
 		}
+		if hc == 0 {
+			continue
+		}
 		pwMatches = append(pwMatches, Match{
 			Hash:  fh,
 			Count: hc,
