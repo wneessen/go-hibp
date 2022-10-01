@@ -9,7 +9,7 @@ import (
 
 const (
 	validDateJSON     = `{"date": "2022-10-01"}`
-	validNullDateJSON = `{"date": "null""}`
+	validNullDateJSON = `{"date": "null"}`
 	invalidJSON       = `{"date": '2022-10-01'}`
 	invalidDateJSON   = `{"date": "202299-10-01"}`
 )
