@@ -1,9 +1,17 @@
 package hibp
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
+)
+
+const (
+	validDateJSON     = `{"date": "2022-10-01"}`
+	validNullDateJSON = `{"date": "null"}`
+	invalidJSON       = `{"date": '2022-10-01'}`
+	invalidDateJSON   = `{"date": "202299-10-01"}`
 )
 
 // TestBreaches tests the Breaches() method of the breaches API
@@ -232,6 +240,44 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 				if tc.breachDomain != b.Domain {
 					t.Errorf("breach domain for the account %q does not match. expected: %q, got: %q",
 						tc.accountName, tc.breachDomain, b.Domain)
+				}
+			}
+		})
+	}
+}
+
+// TestApiDate_UnmarshalJSON_Time tests the ApiDate type JSON unmarshalling
+func TestApiDate_UnmarshalJSON_Time(t *testing.T) {
+	type testData struct {
+		Date *ApiDate `json:"date"`
+	}
+	tt := []struct {
+		n   string
+		j   []byte
+		d   string
+		nil bool
+		sf  bool
+	}{
+		{"valid Date JSON", []byte(validDateJSON), "2022-10-01", false, false},
+		{"valid Null Date JSON", []byte(validNullDateJSON), "", true, false},
+		{"invalid JSON", []byte(invalidJSON), "", true, true},
+		{"invalid Date", []byte(invalidDateJSON), "", true, true},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.n, func(t *testing.T) {
+			var td testData
+			if err := json.Unmarshal(tc.j, &td); err != nil && !tc.sf {
+				t.Errorf("failed to unmarshal test JSON: %s", err)
+			}
+			if td.Date == nil && !tc.nil {
+				t.Errorf("unmarshal on ApiDate type failed. Expected data but got nil")
+				return
+			}
+			if !tc.nil {
+				tdd := td.Date.Time().Format("2006-01-02")
+				if tdd != tc.d && !tc.sf {
+					t.Errorf(`unmarshal of ApiDate type failed. Expected: %q, got %q"`, tc.d, tdd)
 				}
 			}
 		})

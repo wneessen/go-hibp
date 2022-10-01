@@ -213,8 +213,9 @@ func (d *ApiDate) UnmarshalJSON(s []byte) error {
 }
 
 // Time adds a Time() method to the ApiDate converted time.Time type
-func (d ApiDate) Time() time.Time {
-	return time.Time(d)
+func (d *ApiDate) Time() time.Time {
+	dp := *d
+	return time.Time(dp)
 }
 
 // setBreachOpts returns a map of default settings and overridden values from different BreachOption
