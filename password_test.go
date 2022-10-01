@@ -162,7 +162,7 @@ func ExamplePwnedPassApi_CheckPassword() {
 	if m != nil && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
 			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86453 times in the pwned passwords DB
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86495 times in the pwned passwords DB
 	}
 }
 
@@ -177,7 +177,7 @@ func ExamplePwnedPassApi_CheckPassword_withPadding() {
 	if m != nil && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
 			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86453 times in the pwned passwords DB
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86495 times in the pwned passwords DB
 	}
 }
 
@@ -193,6 +193,6 @@ func ExamplePwnedPassApi_CheckSHA1() {
 	if m != nil && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
 			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86453 times in the pwned passwords DB
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 86495 times in the pwned passwords DB
 	}
 }
