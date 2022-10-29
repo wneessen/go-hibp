@@ -2,6 +2,7 @@ package hibp
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -70,5 +71,41 @@ func TestNewWithUserAgent(t *testing.T) {
 	if hc.ua != DefaultUserAgent {
 		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
 			DefaultUserAgent, hc.ua)
+	}
+}
+
+func TestClient_HTTPReq(t *testing.T) {
+	u1 := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
+	u2 := "this://is.invalid.tld/"
+	hc := New()
+	_, err := hc.HTTPReq(http.MethodGet, u1, map[string]string{"foo": "bar"})
+	if err == nil {
+		t.Errorf("HTTP GET request was supposed to fail, but didn't")
+	}
+	_, err = hc.HTTPReq("äöü", u2, map[string]string{"foo": "bar"})
+	if err == nil {
+		t.Errorf("HTTP GET request was supposed to fail, but didn't")
+	}
+	_, err = hc.HTTPReq("POST", u2, map[string]string{"foo": "bar"})
+	if err != nil {
+		t.Errorf("HTTP POST request failed: %s", err)
+	}
+}
+
+func TestClient_HTTPResBody(t *testing.T) {
+	u1 := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
+	u2 := "this://is.invalid.tld/"
+	hc := New()
+	_, _, err := hc.HTTPResBody(http.MethodGet, u1, map[string]string{"foo": "bar"})
+	if err == nil {
+		t.Errorf("HTTP GET request was supposed to fail, but didn't")
+	}
+	_, _, err = hc.HTTPResBody("äöü", u2, map[string]string{"foo": "bar"})
+	if err == nil {
+		t.Errorf("HTTP GET request was supposed to fail, but didn't")
+	}
+	_, _, err = hc.HTTPResBody("POST", u2, map[string]string{"foo": "bar"})
+	if err == nil {
+		t.Errorf("HTTP POST request was supposed to fail, but didn't")
 	}
 }
