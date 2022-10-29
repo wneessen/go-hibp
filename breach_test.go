@@ -17,7 +17,7 @@ const (
 // TestBreaches tests the Breaches() method of the breaches API
 func TestBreaches(t *testing.T) {
 	hc := New()
-	breachList, _, err := hc.BreachApi.Breaches()
+	breachList, _, err := hc.BreachAPI.Breaches()
 	if err != nil {
 		t.Error(err)
 	}
@@ -29,7 +29,7 @@ func TestBreaches(t *testing.T) {
 // TestBreachesWithNil tests the Breaches() method of the breaches API with a nil option
 func TestBreachesWithNil(t *testing.T) {
 	hc := New()
-	breachList, _, err := hc.BreachApi.Breaches(nil)
+	breachList, _, err := hc.BreachAPI.Breaches(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +52,7 @@ func TestBreachesWithDomain(t *testing.T) {
 	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain))
+			breachList, _, err := hc.BreachAPI.Breaches(WithDomain(tc.domain))
 			if err != nil {
 				t.Error(err)
 			}
@@ -91,7 +91,7 @@ func TestBreachesWithoutUnverified(t *testing.T) {
 	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachList, _, err := hc.BreachApi.Breaches(WithDomain(tc.domain), WithoutUnverified())
+			breachList, _, err := hc.BreachAPI.Breaches(WithDomain(tc.domain), WithoutUnverified())
 			if err != nil {
 				t.Error(err)
 			}
@@ -119,7 +119,7 @@ func TestBreachByName(t *testing.T) {
 	hc := New(WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachDetails, _, err := hc.BreachApi.BreachByName(tc.breachName)
+			breachDetails, _, err := hc.BreachAPI.BreachByName(tc.breachName)
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
 			}
@@ -139,7 +139,7 @@ func TestBreachByName(t *testing.T) {
 // TestDataClasses tests the DataClasses() method of the breaches API
 func TestDataClasses(t *testing.T) {
 	hc := New()
-	classList, _, err := hc.BreachApi.DataClasses()
+	classList, _, err := hc.BreachAPI.DataClasses()
 	if err != nil {
 		t.Error(err)
 	}
@@ -156,10 +156,14 @@ func TestBreachedAccount(t *testing.T) {
 		isBreached        bool
 		moreThanOneBreach bool
 	}{
-		{"account-exists is breached once", "account-exists", true,
-			false},
-		{"multiple-breaches is breached multiple times", "multiple-breaches",
-			true, true},
+		{
+			"account-exists is breached once", "account-exists", true,
+			false,
+		},
+		{
+			"multiple-breaches is breached multiple times", "multiple-breaches",
+			true, true,
+		},
 		{"opt-out is not breached", "opt-out", false, false},
 	}
 
@@ -167,10 +171,10 @@ func TestBreachedAccount(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachDetails, _, err := hc.BreachApi.BreachedAccount(
+			breachDetails, _, err := hc.BreachAPI.BreachedAccount(
 				fmt.Sprintf("%s@hibp-integration-tests.com", tc.accountName))
 			if err != nil && tc.isBreached {
 				t.Error(err)
@@ -206,10 +210,14 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		breachDomain string
 		shouldFail   bool
 	}{
-		{"account-exists is breached once", "account-exists@hibp-integration-tests.com", "Adobe",
-			"adobe.com", false},
-		{"multiple-breaches is breached multiple times", "multiple-breaches@hibp-integration-tests.com", "Adobe",
-			"adobe.com", false},
+		{
+			"account-exists is breached once", "account-exists@hibp-integration-tests.com", "Adobe",
+			"adobe.com", false,
+		},
+		{
+			"multiple-breaches is breached multiple times", "multiple-breaches@hibp-integration-tests.com", "Adobe",
+			"adobe.com", false,
+		},
 		{"opt-out is not breached", "opt-out@hibp-integration-tests.com", "", "", true},
 		{"empty string should fail", "", "", "", true},
 	}
@@ -218,10 +226,10 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			breachDetails, _, err := hc.BreachApi.BreachedAccount(tc.accountName, WithoutTruncate())
+			breachDetails, _, err := hc.BreachAPI.BreachedAccount(tc.accountName, WithoutTruncate())
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
 				return
@@ -246,10 +254,10 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 	}
 }
 
-// TestApiDate_UnmarshalJSON_Time tests the ApiDate type JSON unmarshalling
-func TestApiDate_UnmarshalJSON_Time(t *testing.T) {
+// TestAPIDate_UnmarshalJSON_Time tests the APIDate type JSON unmarshalling
+func TestAPIDate_UnmarshalJSON_Time(t *testing.T) {
 	type testData struct {
-		Date *ApiDate `json:"date"`
+		Date *APIDate `json:"date"`
 	}
 	tt := []struct {
 		n   string
@@ -271,24 +279,24 @@ func TestApiDate_UnmarshalJSON_Time(t *testing.T) {
 				t.Errorf("failed to unmarshal test JSON: %s", err)
 			}
 			if td.Date == nil && !tc.nil {
-				t.Errorf("unmarshal on ApiDate type failed. Expected data but got nil")
+				t.Errorf("unmarshal on APIDate type failed. Expected data but got nil")
 				return
 			}
 			if !tc.nil {
 				tdd := td.Date.Time().Format("2006-01-02")
 				if tdd != tc.d && !tc.sf {
-					t.Errorf(`unmarshal of ApiDate type failed. Expected: %q, got %q"`, tc.d, tdd)
+					t.Errorf(`unmarshal of APIDate type failed. Expected: %q, got %q"`, tc.d, tdd)
 				}
 			}
 		})
 	}
 }
 
-// ExampleBreachApi_Breaches_getAllBreaches is a code example to show how to fetch all breaches from the
+// ExampleBreachAPI_Breaches_getAllBreaches is a code example to show how to fetch all breaches from the
 // HIBP breaches API
-func ExampleBreachApi_Breaches_getAllBreaches() {
+func ExampleBreachAPI_Breaches_getAllBreaches() {
 	hc := New()
-	bl, _, err := hc.BreachApi.Breaches()
+	bl, _, err := hc.BreachAPI.Breaches()
 	if err != nil {
 		panic(err)
 	}
@@ -300,11 +308,11 @@ func ExampleBreachApi_Breaches_getAllBreaches() {
 	}
 }
 
-// ExampleBreachApi_Breaches_getAllBreachesNoUnverified is a code example to show how to fetch all breaches from the
+// ExampleBreachAPI_Breaches_getAllBreachesNoUnverified is a code example to show how to fetch all breaches from the
 // HIBP breaches API but ignoring unverified breaches
-func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
+func ExampleBreachAPI_Breaches_getAllBreachesNoUnverified() {
 	hc := New()
-	bl, _, err := hc.BreachApi.Breaches()
+	bl, _, err := hc.BreachAPI.Breaches()
 	if err != nil {
 		panic(err)
 	}
@@ -312,7 +320,7 @@ func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
 		fmt.Printf("Found %d breaches total.\n", len(bl))
 	}
 
-	bl, _, err = hc.BreachApi.Breaches(WithoutUnverified())
+	bl, _, err = hc.BreachAPI.Breaches(WithoutUnverified())
 	if err != nil {
 		panic(err)
 	}
@@ -321,11 +329,11 @@ func ExampleBreachApi_Breaches_getAllBreachesNoUnverified() {
 	}
 }
 
-// ExampleBreachApi_BreachByName is a code example to show how to fetch a specific breach
+// ExampleBreachAPI_BreachByName is a code example to show how to fetch a specific breach
 // from the HIBP breaches API using the BreachByName method
-func ExampleBreachApi_BreachByName() {
+func ExampleBreachAPI_BreachByName() {
 	hc := New()
-	bd, _, err := hc.BreachApi.BreachByName("Adobe")
+	bd, _, err := hc.BreachAPI.BreachByName("Adobe")
 	if err != nil {
 		panic(err)
 	}
@@ -337,15 +345,15 @@ func ExampleBreachApi_BreachByName() {
 	}
 }
 
-// ExampleBreachApi_BreachedAccount is a code example to show how to fetch a list of breaches
+// ExampleBreachAPI_BreachedAccount is a code example to show how to fetch a list of breaches
 // for a specific site/account from the HIBP breaches API using the BreachedAccount method
-func ExampleBreachApi_BreachedAccount() {
+func ExampleBreachAPI_BreachedAccount() {
 	apiKey := os.Getenv("HIBP_API_KEY")
 	if apiKey == "" {
 		panic("A API key is required for this API")
 	}
-	hc := New(WithApiKey(apiKey))
-	bd, _, err := hc.BreachApi.BreachedAccount("multiple-breaches@hibp-integration-tests.com")
+	hc := New(WithAPIKey(apiKey))
+	bd, _, err := hc.BreachAPI.BreachedAccount("multiple-breaches@hibp-integration-tests.com")
 	if err != nil {
 		panic(err)
 	}

@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// PasteApi is a HIBP pastes API client
-type PasteApi struct {
+// PasteAPI is a HIBP pastes API client
+type PasteAPI struct {
 	hibp *Client // References back to the parent HIBP client
 }
 
@@ -18,9 +18,9 @@ type Paste struct {
 	// Pastie, Slexy, Ghostbin, QuickLeak, JustPaste, AdHocUrl, PermanentOptOut, OptOut
 	Source string `json:"Source"`
 
-	// Id of the paste as it was given at the source service. Combined with the "Source" attribute, this
+	// ID of the paste as it was given at the source service. Combined with the "Source" attribute, this
 	// can be used to resolve the URL of the paste
-	Id string `json:"Id"`
+	ID string `json:"ID"`
 
 	// Title of the paste as observed on the source site. This may be null and if so will be omitted from
 	// the response
@@ -36,13 +36,13 @@ type Paste struct {
 }
 
 // PastedAccount returns a single breached site based on its name
-func (p *PasteApi) PastedAccount(a string) ([]*Paste, *http.Response, error) {
+func (p *PasteAPI) PastedAccount(a string) ([]*Paste, *http.Response, error) {
 	if a == "" {
 		return nil, nil, fmt.Errorf("no account id given")
 	}
 
-	apiUrl := fmt.Sprintf("%s/pasteaccount/%s", BaseUrl, a)
-	hb, hr, err := p.hibp.HttpResBody(http.MethodGet, apiUrl, nil)
+	apiURL := fmt.Sprintf("%s/pasteaccount/%s", BaseURL, a)
+	hb, hr, err := p.hibp.HTTPResBody(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, nil, err
 	}

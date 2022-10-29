@@ -15,8 +15,8 @@ import (
 // Version represents the version of this package
 const Version = "1.0.2"
 
-// BaseUrl is the base URL for the majority of API calls
-const BaseUrl = "https://haveibeenpwned.com/api/v3"
+// BaseURL is the base URL for the majority of API calls
+const BaseURL = "https://haveibeenpwned.com/api/v3"
 
 // DefaultUserAgent defines the default UA string for the HTTP client
 // Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
@@ -34,11 +34,11 @@ type Client struct {
 	// rate limit hits a request
 	rlSleep bool
 
-	PwnedPassApi     *PwnedPassApi         // Reference to the PwnedPassApi API
-	PwnedPassApiOpts *PwnedPasswordOptions // Additional options for the PwnedPassApi API
+	PwnedPassAPI     *PwnedPassAPI         // Reference to the PwnedPassAPI API
+	PwnedPassAPIOpts *PwnedPasswordOptions // Additional options for the PwnedPassAPI API
 
-	BreachApi *BreachApi // Reference to the BreachApi
-	PasteApi  *PasteApi  // Reference to the PasteApi
+	BreachAPI *BreachAPI // Reference to the BreachAPI
+	PasteAPI  *PasteAPI  // Reference to the PasteAPI
 }
 
 // Option is a function that is used for grouping of Client options.
@@ -50,7 +50,7 @@ func New(options ...Option) Client {
 
 	// Set defaults
 	c.to = time.Second * 5
-	c.PwnedPassApiOpts = &PwnedPasswordOptions{}
+	c.PwnedPassAPIOpts = &PwnedPasswordOptions{}
 	c.ua = DefaultUserAgent
 
 	// Set additional options
@@ -65,22 +65,22 @@ func New(options ...Option) Client {
 	c.hc = httpClient(c.to)
 
 	// Associate the different HIBP service APIs with the Client
-	c.PwnedPassApi = &PwnedPassApi{hibp: &c}
-	c.BreachApi = &BreachApi{hibp: &c}
-	c.PasteApi = &PasteApi{hibp: &c}
+	c.PwnedPassAPI = &PwnedPassAPI{hibp: &c}
+	c.BreachAPI = &BreachAPI{hibp: &c}
+	c.PasteAPI = &PasteAPI{hibp: &c}
 
 	return c
 }
 
-// WithHttpTimeout overrides the default http client timeout
-func WithHttpTimeout(t time.Duration) Option {
+// WithHTTPTimeout overrides the default http client timeout
+func WithHTTPTimeout(t time.Duration) Option {
 	return func(c *Client) {
 		c.to = t
 	}
 }
 
-// WithApiKey set the optional API key to the Client object
-func WithApiKey(k string) Option {
+// WithAPIKey set the optional API key to the Client object
+func WithAPIKey(k string) Option {
 	return func(c *Client) {
 		c.ak = k
 	}
@@ -89,7 +89,7 @@ func WithApiKey(k string) Option {
 // WithPwnedPadding enables padding-mode for the PwnedPasswords API client
 func WithPwnedPadding() Option {
 	return func(c *Client) {
-		c.PwnedPassApiOpts.WithPadding = true
+		c.PwnedPassAPIOpts.WithPadding = true
 	}
 }
 
@@ -110,8 +110,8 @@ func WithRateLimitSleep() Option {
 	}
 }
 
-// HttpReq performs an HTTP request to the corresponding API
-func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error) {
+// HTTPReq performs an HTTP request to the corresponding API
+func (c *Client) HTTPReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
 	if err != nil {
 		return nil, err
@@ -145,16 +145,16 @@ func (c *Client) HttpReq(m, p string, q map[string]string) (*http.Request, error
 	if c.ak != "" {
 		hr.Header.Set("hibp-api-key", c.ak)
 	}
-	if c.PwnedPassApiOpts.WithPadding {
+	if c.PwnedPassAPIOpts.WithPadding {
 		hr.Header.Set("Add-Padding", "true")
 	}
 
 	return hr, nil
 }
 
-// HttpResBody performs the API call to the given path and returns the response body as byte array
-func (c *Client) HttpResBody(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
-	hreq, err := c.HttpReq(m, p, q)
+// HTTPResBody performs the API call to the given path and returns the response body as byte array
+func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *http.Response, error) {
+	hreq, err := c.HTTPReq(m, p, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,7 +179,7 @@ func (c *Client) HttpResBody(m string, p string, q map[string]string) ([]byte, *
 		}
 		log.Printf("API rate limit hit. Retrying request in %s", delayTime.String())
 		time.Sleep(delayTime)
-		return c.HttpResBody(m, p, q)
+		return c.HTTPResBody(m, p, q)
 	}
 
 	if hr.StatusCode != 200 {

@@ -19,8 +19,8 @@ const (
 	ErrSHA1LengthMismatch = "SHA1 hash size needs to be 160 bits"
 )
 
-// PwnedPassApi is a HIBP Pwned Passwords API client
-type PwnedPassApi struct {
+// PwnedPassAPI is a HIBP Pwned Passwords API client
+type PwnedPassAPI struct {
 	hibp *Client // References back to the parent HIBP client
 }
 
@@ -38,13 +38,13 @@ type PwnedPasswordOptions struct {
 }
 
 // CheckPassword checks the Pwned Passwords database against a given password string
-func (p *PwnedPassApi) CheckPassword(pw string) (*Match, *http.Response, error) {
+func (p *PwnedPassAPI) CheckPassword(pw string) (*Match, *http.Response, error) {
 	shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
 	return p.CheckSHA1(shaSum)
 }
 
 // CheckSHA1 checks the Pwned Passwords database against a given SHA1 checksum of a password string
-func (p *PwnedPassApi) CheckSHA1(h string) (*Match, *http.Response, error) {
+func (p *PwnedPassAPI) CheckSHA1(h string) (*Match, *http.Response, error) {
 	if len(h) != 40 {
 		return nil, nil, fmt.Errorf(ErrSHA1LengthMismatch)
 	}
@@ -67,7 +67,7 @@ func (p *PwnedPassApi) CheckSHA1(h string) (*Match, *http.Response, error) {
 //
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
-func (p *PwnedPassApi) ListHashesPassword(pw string) ([]Match, *http.Response, error) {
+func (p *PwnedPassAPI) ListHashesPassword(pw string) ([]Match, *http.Response, error) {
 	shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
 	return p.ListHashesSHA1(shaSum)
 }
@@ -77,7 +77,7 @@ func (p *PwnedPassApi) ListHashesPassword(pw string) ([]Match, *http.Response, e
 //
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
-func (p *PwnedPassApi) ListHashesSHA1(h string) ([]Match, *http.Response, error) {
+func (p *PwnedPassAPI) ListHashesSHA1(h string) ([]Match, *http.Response, error) {
 	if len(h) != 40 {
 		return nil, nil, fmt.Errorf(ErrSHA1LengthMismatch)
 	}
@@ -89,11 +89,11 @@ func (p *PwnedPassApi) ListHashesSHA1(h string) ([]Match, *http.Response, error)
 //
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
-func (p *PwnedPassApi) ListHashesPrefix(pf string) ([]Match, *http.Response, error) {
+func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, error) {
 	if len(pf) != 5 {
 		return nil, nil, fmt.Errorf(ErrPrefixLengthMismatch)
 	}
-	hreq, err := p.hibp.HttpReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", pf),
+	hreq, err := p.hibp.HTTPReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", pf),
 		nil)
 	if err != nil {
 		return nil, nil, err
