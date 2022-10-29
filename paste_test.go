@@ -23,10 +23,10 @@ func TestPasteAccount(t *testing.T) {
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithApiKey(apiKey), WithRateLimitSleep())
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
 	for _, tc := range testTable {
 		t.Run(tc.testName, func(t *testing.T) {
-			pasteDetails, _, err := hc.PasteApi.PastedAccount(tc.accountName)
+			pasteDetails, _, err := hc.PasteAPI.PastedAccount(tc.accountName)
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
 			}
@@ -43,15 +43,15 @@ func TestPasteAccount(t *testing.T) {
 	}
 }
 
-// ExamplePasteApi_PastedAccount is a code example to show how to fetch a specific paste
+// ExamplePasteAPI_pastedAccount is a code example to show how to fetch a specific paste
 // based on its name from the HIBP pastes API using the PastedAccount() method
-func ExamplePasteApi_PastedAccount() {
+func ExamplePasteAPI_pastedAccount() {
 	apiKey := os.Getenv("HIBP_API_KEY")
 	if apiKey == "" {
 		panic("A API key is required for this API")
 	}
-	hc := New(WithApiKey(apiKey))
-	pd, _, err := hc.PasteApi.PastedAccount("account-exists@hibp-integration-tests.com")
+	hc := New(WithAPIKey(apiKey))
+	pd, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
 	if err != nil {
 		panic(err)
 	}
