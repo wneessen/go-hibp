@@ -2,6 +2,7 @@ package hibp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -14,8 +15,8 @@ const (
 	invalidDateJSON   = `{"date": "202299-10-01"}`
 )
 
-// TestBreaches tests the Breaches() method of the breaches API
-func TestBreaches(t *testing.T) {
+// TestBreachAPI_Breaches tests the Breaches() method of the breaches API
+func TestBreachAPI_Breaches(t *testing.T) {
 	hc := New()
 	breachList, _, err := hc.BreachAPI.Breaches()
 	if err != nil {
@@ -26,20 +27,21 @@ func TestBreaches(t *testing.T) {
 	}
 }
 
-// TestBreachesWithNil tests the Breaches() method of the breaches API with a nil option
-func TestBreachesWithNil(t *testing.T) {
+// TestBreachAPI_Breaches_WithNIL tests the Breaches() method of the breaches API with a nil option
+func TestBreachAPI_Breaches_WithNIL(t *testing.T) {
 	hc := New()
 	breachList, _, err := hc.BreachAPI.Breaches(nil)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if breachList != nil && len(breachList) <= 0 {
 		t.Error("breaches list returned 0 results")
 	}
 }
 
-// TestBreachesWithDomain tests the Breaches() method of the breaches API for a specific domain
-func TestBreachesWithDomain(t *testing.T) {
+// TestBreachAPI_Breaches_WithDomain tests the Breaches() method of the breaches API for a specific domain
+func TestBreachAPI_Breaches_WithDomain(t *testing.T) {
 	testTable := []struct {
 		testName   string
 		domain     string
@@ -55,6 +57,7 @@ func TestBreachesWithDomain(t *testing.T) {
 			breachList, _, err := hc.BreachAPI.Breaches(WithDomain(tc.domain))
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
 			if breachList == nil && tc.isBreached {
@@ -75,8 +78,8 @@ func TestBreachesWithDomain(t *testing.T) {
 	}
 }
 
-// TestBreachesWithoutUnverified tests the Breaches() method of the breaches API with the unverified parameter
-func TestBreachesWithoutUnverified(t *testing.T) {
+// TestBreachAPI_Breaches_WithoutUnverified tests the Breaches() method of the breaches API with the unverified parameter
+func TestBreachAPI_Breaches_WithoutUnverified(t *testing.T) {
 	testTable := []struct {
 		testName   string
 		domain     string
@@ -94,6 +97,7 @@ func TestBreachesWithoutUnverified(t *testing.T) {
 			breachList, _, err := hc.BreachAPI.Breaches(WithDomain(tc.domain), WithoutUnverified())
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
 			if breachList == nil && tc.isVerified && tc.isBreached {
@@ -104,8 +108,8 @@ func TestBreachesWithoutUnverified(t *testing.T) {
 	}
 }
 
-// TestBreachByName tests the BreachByName() method of the breaches API for a specific domain
-func TestBreachByName(t *testing.T) {
+// TestBreachAPI_BreachByName tests the BreachByName() method of the breaches API for a specific domain
+func TestBreachAPI_BreachByName(t *testing.T) {
 	testTable := []struct {
 		testName   string
 		breachName string
@@ -122,6 +126,7 @@ func TestBreachByName(t *testing.T) {
 			breachDetails, _, err := hc.BreachAPI.BreachByName(tc.breachName)
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
+				return
 			}
 
 			if breachDetails == nil && tc.isBreached {
@@ -136,20 +141,42 @@ func TestBreachByName(t *testing.T) {
 	}
 }
 
-// TestDataClasses tests the DataClasses() method of the breaches API
-func TestDataClasses(t *testing.T) {
+// TestBreachAPI_BreachByName_FailedHTTP tests the BreachByName() method with a failing HTTP request
+func TestBreachAPI_BreachByName_FailedHTTP(t *testing.T) {
+	hc := New(WithRateLimitSleep())
+	_, res, err := hc.BreachAPI.BreachByName("fäiled_invalid")
+	if err == nil {
+		t.Errorf("HTTP request was supposed to fail but didn't")
+	}
+	if res == nil {
+		t.Errorf("expected HTTP response but got nil")
+	}
+}
+
+// TestBreachAPI_BreachByName_Errors tests the errors for the BreachByName() method
+func TestBreachAPI_BreachByName_Errors(t *testing.T) {
+	hc := New(WithRateLimitSleep())
+	_, _, err := hc.BreachAPI.BreachByName("")
+	if !errors.Is(err, ErrNoName) {
+		t.Errorf("expected to receive ErrNoName error but didn't")
+	}
+}
+
+// TestBreachAPI_DataClasses tests the DataClasses() method of the breaches API
+func TestBreachAPI_DataClasses(t *testing.T) {
 	hc := New()
 	classList, _, err := hc.BreachAPI.DataClasses()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if classList != nil && len(classList) <= 0 {
 		t.Error("breaches list returned 0 results")
 	}
 }
 
-// TestBreachedAccount tests the BreachedAccount() method of the breaches API
-func TestBreachedAccount(t *testing.T) {
+// TestBreachAPI_BreachedAccount tests the BreachedAccount() method of the breaches API
+func TestBreachAPI_BreachedAccount(t *testing.T) {
 	testTable := []struct {
 		testName          string
 		accountName       string
@@ -200,9 +227,35 @@ func TestBreachedAccount(t *testing.T) {
 	}
 }
 
-// TestBreachedAccountWithoutTruncate tests the BreachedAccount() method of the breaches API with the
+// TestBreachAPI_BreachedAccount_FailedHTTP tests the BreachedAccount() method of the breaches API with a failing
+// HTTP request
+func TestBreachAPI_BreachedAccount_FailedHTTP(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
+	_, res, err := hc.BreachAPI.BreachedAccount("bröken@invalid_domain.tld")
+	if err == nil {
+		t.Error("HTTP request was supposed to fail, but didn't")
+	}
+	if res == nil {
+		t.Errorf("expected HTTP response but got nil")
+	}
+}
+
+// TestBreachAPI_BreachedAccount_Errors tests the errors for the BreachedAccount() method
+func TestBreachAPI_BreachedAccount_Errors(t *testing.T) {
+	hc := New(WithRateLimitSleep())
+	_, _, err := hc.BreachAPI.BreachedAccount("")
+	if !errors.Is(err, ErrNoAccountID) {
+		t.Errorf("expected to receive ErrNoAccountID error but didn't")
+	}
+}
+
+// TestBreachAPI_BreachedAccount_WithoutTruncate tests the BreachedAccount() method of the breaches API with the
 // truncateResponse option set to false
-func TestBreachedAccountWithoutTruncate(t *testing.T) {
+func TestBreachAPI_BreachedAccount_WithoutTruncate(t *testing.T) {
 	testTable := []struct {
 		testName     string
 		accountName  string
@@ -211,14 +264,17 @@ func TestBreachedAccountWithoutTruncate(t *testing.T) {
 		shouldFail   bool
 	}{
 		{
-			"account-exists is breached once", "account-exists@hibp-integration-tests.com", "Adobe",
-			"adobe.com", false,
+			"account-exists is breached once", "account-exists@hibp-integration-tests.com",
+			"Adobe", "adobe.com", false,
 		},
 		{
-			"multiple-breaches is breached multiple times", "multiple-breaches@hibp-integration-tests.com", "Adobe",
-			"adobe.com", false,
+			"multiple-breaches is breached multiple times", "multiple-breaches@hibp-integration-tests.com",
+			"Adobe", "adobe.com", false,
 		},
-		{"opt-out is not breached", "opt-out@hibp-integration-tests.com", "", "", true},
+		{
+			"opt-out is not breached", "opt-out@hibp-integration-tests.com", "",
+			"", true,
+		},
 		{"empty string should fail", "", "", "", true},
 	}
 
