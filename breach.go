@@ -96,81 +96,81 @@ type APIDate time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
 func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
-	queryParams := b.setBreachOpts(options...)
-	apiURL := fmt.Sprintf("%s/breaches", BaseURL)
+	qp := b.setBreachOpts(options...)
+	au := fmt.Sprintf("%s/breaches", BaseURL)
 
-	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, apiURL, queryParams)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var breachList []*Breach
-	if err := json.Unmarshal(hb, &breachList); err != nil {
 		return nil, hr, err
 	}
 
-	return breachList, hr, nil
+	var bl []*Breach
+	if err := json.Unmarshal(hb, &bl); err != nil {
+		return nil, hr, err
+	}
+
+	return bl, hr, nil
 }
 
 // BreachByName returns a single breached site based on its name
 func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (*Breach, *http.Response, error) {
-	queryParams := b.setBreachOpts(options...)
+	qp := b.setBreachOpts(options...)
 
 	if n == "" {
-		return nil, nil, fmt.Errorf("no breach name given")
+		return nil, nil, ErrNoName
 	}
 
-	apiURL := fmt.Sprintf("%s/breach/%s", BaseURL, n)
-	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, apiURL, queryParams)
+	au := fmt.Sprintf("%s/breach/%s", BaseURL, n)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var breachDetails *Breach
-	if err := json.Unmarshal(hb, &breachDetails); err != nil {
 		return nil, hr, err
 	}
 
-	return breachDetails, hr, nil
+	var bd *Breach
+	if err := json.Unmarshal(hb, &bd); err != nil {
+		return nil, hr, err
+	}
+
+	return bd, hr, nil
 }
 
 // DataClasses are attribute of a record compromised in a breach. This method returns a list of strings
 // with all registered data classes known to HIBP
 func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
-	apiURL := fmt.Sprintf("%s/dataclasses", BaseURL)
-	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, apiURL, nil)
+	au := fmt.Sprintf("%s/dataclasses", BaseURL)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var dataClasses []string
-	if err := json.Unmarshal(hb, &dataClasses); err != nil {
 		return nil, hr, err
 	}
 
-	return dataClasses, hr, nil
+	var dc []string
+	if err := json.Unmarshal(hb, &dc); err != nil {
+		return nil, hr, err
+	}
+
+	return dc, hr, nil
 }
 
 // BreachedAccount returns a single breached site based on its name
 func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]*Breach, *http.Response, error) {
-	queryParams := b.setBreachOpts(options...)
+	qp := b.setBreachOpts(options...)
 
 	if a == "" {
-		return nil, nil, fmt.Errorf("no account id given")
+		return nil, nil, ErrNoAccountID
 	}
 
-	apiURL := fmt.Sprintf("%s/breachedaccount/%s", BaseURL, a)
-	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, apiURL, queryParams)
+	au := fmt.Sprintf("%s/breachedaccount/%s", BaseURL, a)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var breachDetails []*Breach
-	if err := json.Unmarshal(hb, &breachDetails); err != nil {
 		return nil, hr, err
 	}
 
-	return breachDetails, hr, nil
+	var bd []*Breach
+	if err := json.Unmarshal(hb, &bd); err != nil {
+		return nil, hr, err
+	}
+
+	return bd, hr, nil
 }
 
 // WithDomain sets the domain filter for the breaches API
@@ -205,7 +205,7 @@ func (d *APIDate) UnmarshalJSON(s []byte) error {
 
 	pd, err := time.Parse("2006-01-02", ds)
 	if err != nil {
-		return fmt.Errorf("failed to convert API date string to time.Time type: %w", err)
+		return fmt.Errorf("convert API date string to time.Time type: %w", err)
 	}
 
 	*(*time.Time)(d) = pd
@@ -220,7 +220,7 @@ func (d *APIDate) Time() time.Time {
 
 // setBreachOpts returns a map of default settings and overridden values from different BreachOption
 func (b *BreachAPI) setBreachOpts(options ...BreachOption) map[string]string {
-	queryParams := map[string]string{
+	qp := map[string]string{
 		"truncateResponse":  "true",
 		"includeUnverified": "true",
 	}
@@ -233,16 +233,16 @@ func (b *BreachAPI) setBreachOpts(options ...BreachOption) map[string]string {
 	}
 
 	if b.domain != "" {
-		queryParams["domain"] = b.domain
+		qp["domain"] = b.domain
 	}
 
 	if b.disableTrunc {
-		queryParams["truncateResponse"] = "false"
+		qp["truncateResponse"] = "false"
 	}
 
 	if b.noUnverified {
-		queryParams["includeUnverified"] = "false"
+		qp["includeUnverified"] = "false"
 	}
 
-	return queryParams
+	return qp
 }

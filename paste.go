@@ -2,14 +2,10 @@ package hibp
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 )
-
-// ErrNoAccountID is returned if no account ID is given to the PastedAccount method
-var ErrNoAccountID = errors.New("no account ID given")
 
 // PasteAPI is a HIBP pastes API client
 type PasteAPI struct {
