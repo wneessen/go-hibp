@@ -16,8 +16,11 @@ import (
 // Version represents the version of this package
 const Version = "1.0.5"
 
-// BaseURL is the base URL for the majority of API calls
+// BaseURL is the base URL for the majority of API endpoints
 const BaseURL = "https://haveibeenpwned.com/api/v3"
+
+// PasswdBaseURL is the base URL for the pwned passwords API endpoints
+const PasswdBaseURL = "https://api.pwnedpasswords.com"
 
 // DefaultUserAgent defines the default UA string for the HTTP client
 // Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
@@ -37,6 +40,17 @@ var (
 
 	// ErrNonPositiveResponse should be returned if a HTTP request failed with a non HTTP-200 status
 	ErrNonPositiveResponse = errors.New("non HTTP-200 response for HTTP request")
+
+	// ErrPrefixLengthMismatch should be used if a given prefix does not match the
+	// expected length
+	ErrPrefixLengthMismatch = errors.New("password hash prefix must be 5 characters long")
+
+	// ErrSHA1LengthMismatch should be used if a given SHA1 checksum does not match the
+	// expected length
+	ErrSHA1LengthMismatch = errors.New("SHA1 hash size needs to be 160 bits")
+
+	// ErrSHA1Invalid should be used if a given string does not represent a valid SHA1 hash
+	ErrSHA1Invalid = errors.New("not a valid SHA1 hash")
 )
 
 // Client is the HIBP client object

@@ -3,20 +3,11 @@ package hibp
 import (
 	"bufio"
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-)
-
-const (
-	// ErrPrefixLengthMismatch should be used if a given prefix does not match the
-	// expected length
-	ErrPrefixLengthMismatch = "password hash prefix must be 5 characters long"
-
-	// ErrSHA1LengthMismatch should be used if a given SHA1 checksum does not match the
-	// expected length
-	ErrSHA1LengthMismatch = "SHA1 hash size needs to be 160 bits"
 )
 
 // PwnedPassAPI is a HIBP Pwned Passwords API client
@@ -46,7 +37,7 @@ func (p *PwnedPassAPI) CheckPassword(pw string) (*Match, *http.Response, error) 
 // CheckSHA1 checks the Pwned Passwords database against a given SHA1 checksum of a password string
 func (p *PwnedPassAPI) CheckSHA1(h string) (*Match, *http.Response, error) {
 	if len(h) != 40 {
-		return nil, nil, fmt.Errorf(ErrSHA1LengthMismatch)
+		return nil, nil, ErrSHA1LengthMismatch
 	}
 
 	pwMatches, hr, err := p.ListHashesPrefix(h[:5])
@@ -79,7 +70,11 @@ func (p *PwnedPassAPI) ListHashesPassword(pw string) ([]Match, *http.Response, e
 // contain junk data
 func (p *PwnedPassAPI) ListHashesSHA1(h string) ([]Match, *http.Response, error) {
 	if len(h) != 40 {
-		return nil, nil, fmt.Errorf(ErrSHA1LengthMismatch)
+		return nil, nil, ErrSHA1LengthMismatch
+	}
+	dst := make([]byte, hex.DecodedLen(len(h)))
+	if _, err := hex.Decode(dst, []byte(h)); err != nil {
+		return nil, nil, ErrSHA1Invalid
 	}
 	return p.ListHashesPrefix(h[:5])
 }
@@ -91,28 +86,29 @@ func (p *PwnedPassAPI) ListHashesSHA1(h string) ([]Match, *http.Response, error)
 // contain junk data
 func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, error) {
 	if len(pf) != 5 {
-		return nil, nil, fmt.Errorf(ErrPrefixLengthMismatch)
+		return nil, nil, ErrPrefixLengthMismatch
 	}
-	hreq, err := p.hibp.HTTPReq(http.MethodGet, fmt.Sprintf("https://api.pwnedpasswords.com/range/%s", pf),
-		nil)
+
+	au := fmt.Sprintf("%s/range/%s", PasswdBaseURL, pf)
+	hreq, err := p.hibp.HTTPReq(http.MethodGet, au, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	hr, err := p.hibp.hc.Do(hreq)
 	if err != nil {
-		return nil, nil, err
-	}
-	if hr.StatusCode != 200 {
-		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s", hr.Status)
+		return nil, hr, err
 	}
 	defer func() {
 		_ = hr.Body.Close()
 	}()
+	if hr.StatusCode != 200 {
+		return nil, hr, fmt.Errorf("HTTP %s: %w", hr.Status, ErrNonPositiveResponse)
+	}
 
-	var pwMatches []Match
-	scanObj := bufio.NewScanner(hr.Body)
-	for scanObj.Scan() {
-		hp := strings.SplitN(scanObj.Text(), ":", 2)
+	var pm []Match
+	so := bufio.NewScanner(hr.Body)
+	for so.Scan() {
+		hp := strings.SplitN(so.Text(), ":", 2)
 		fh := fmt.Sprintf("%s%s", strings.ToLower(pf), strings.ToLower(hp[0]))
 		hc, err := strconv.ParseInt(hp[1], 10, 64)
 		if err != nil {
@@ -121,15 +117,15 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 		if hc == 0 {
 			continue
 		}
-		pwMatches = append(pwMatches, Match{
+		pm = append(pm, Match{
 			Hash:  fh,
 			Count: hc,
 		})
 	}
 
-	if err := scanObj.Err(); err != nil {
-		return nil, nil, err
+	if err := so.Err(); err != nil {
+		return nil, hr, err
 	}
 
-	return pwMatches, hr, nil
+	return pm, hr, nil
 }

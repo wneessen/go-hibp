@@ -1,6 +1,7 @@
 package hibp
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -117,6 +118,74 @@ func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 	if err == nil {
 		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
 	}
+}
+
+// TestPwnedPassAPI_ListHashesPrefix_Errors tests the ListHashesPrefix method's errors
+func TestPwnedPassAPI_ListHashesPrefix_Errors(t *testing.T) {
+	hc := New()
+
+	// Empty prefix
+	t.Run("empty prefix", func(t *testing.T) {
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("")
+		if err == nil {
+			t.Errorf("ListHashesPrefix with empty prefix should fail but didn't")
+			return
+		}
+		if !errors.Is(err, ErrPrefixLengthMismatch) {
+			t.Errorf("ListHashesPrefix with empty prefix should return ErrPrefixLengthMismatch error but didn't")
+			return
+		}
+	})
+
+	// Too long prefix
+	t.Run("too long prefix", func(t *testing.T) {
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("abcdefg12345")
+		if err == nil {
+			t.Errorf("ListHashesPrefix with too long prefix should fail but didn't")
+			return
+		}
+		if !errors.Is(err, ErrPrefixLengthMismatch) {
+			t.Errorf("ListHashesPrefix with too long prefix should return ErrPrefixLengthMismatch error but didn't")
+		}
+	})
+}
+
+// TestPwnedPassAPI_ListHashesSHA1_Errors tests the ListHashesSHA1 method's errors
+func TestPwnedPassAPI_ListHashesSHA1_Errors(t *testing.T) {
+	hc := New()
+
+	// Empty hash
+	t.Run("empty hash", func(t *testing.T) {
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with empty hash should fail but didn't")
+		}
+		if !errors.Is(err, ErrSHA1LengthMismatch) {
+			t.Errorf("ListHashesSHA1 with empty hash should return ErrSHA1LengthMismatch error but didn't")
+		}
+	})
+
+	// Too long hash
+	t.Run("too long hash", func(t *testing.T) {
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("FF36DC7D3284A39991ADA90CAF20D1E3C0DADEFAB")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with too long hash should fail but didn't")
+		}
+		if !errors.Is(err, ErrSHA1LengthMismatch) {
+			t.Errorf("ListHashesSHA1 with too long hash should return ErrSHA1LengthMismatch error but didn't")
+		}
+	})
+
+	// Invalid hash
+	t.Run("invalid hash", func(t *testing.T) {
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("FF36DC7D3284A39991ADA90CAF20D1E3C0DADEFZ")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with invalid hash should fail but didn't")
+		}
+		if !errors.Is(err, ErrSHA1Invalid) {
+			t.Errorf("ListHashesSHA1 with invalid hash should return ErrSHA1Invalid error but didn't")
+		}
+	})
 }
 
 // TestPwnedPassApi_ListHashesSHA1 tests the PwnedPassAPI.ListHashesSHA1 metethod
