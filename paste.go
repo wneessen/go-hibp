@@ -2,10 +2,14 @@ package hibp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 )
+
+// ErrNoAccountID is returned if no account ID is given to the PastedAccount method
+var ErrNoAccountID = errors.New("no account ID given")
 
 // PasteAPI is a HIBP pastes API client
 type PasteAPI struct {
@@ -38,19 +42,19 @@ type Paste struct {
 // PastedAccount returns a single breached site based on its name
 func (p *PasteAPI) PastedAccount(a string) ([]*Paste, *http.Response, error) {
 	if a == "" {
-		return nil, nil, fmt.Errorf("no account id given")
+		return nil, nil, ErrNoAccountID
 	}
 
-	apiURL := fmt.Sprintf("%s/pasteaccount/%s", BaseURL, a)
-	hb, hr, err := p.hibp.HTTPResBody(http.MethodGet, apiURL, nil)
+	au := fmt.Sprintf("%s/pasteaccount/%s", BaseURL, a)
+	hb, hr, err := p.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var pasteDetails []*Paste
-	if err := json.Unmarshal(hb, &pasteDetails); err != nil {
 		return nil, hr, err
 	}
 
-	return pasteDetails, hr, nil
+	var pd []*Paste
+	if err := json.Unmarshal(hb, &pd); err != nil {
+		return nil, hr, err
+	}
+
+	return pd, hr, nil
 }
