@@ -4,6 +4,7 @@ package hibp
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,7 @@ import (
 )
 
 // Version represents the version of this package
-const Version = "1.0.2"
+const Version = "1.0.5"
 
 // BaseURL is the base URL for the majority of API calls
 const BaseURL = "https://haveibeenpwned.com/api/v3"
@@ -21,7 +22,22 @@ const BaseURL = "https://haveibeenpwned.com/api/v3"
 // DefaultUserAgent defines the default UA string for the HTTP client
 // Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
 // not allowing multiple slashes
-const DefaultUserAgent = `go-hibp v` + Version + ` (https://github.com/wneessen/go-hibp)`
+const DefaultUserAgent = `go-hibp/` + Version + ` (+https://github.com/wneessen/go-hibp)`
+
+// DefaultTimeout is the default timeout value for the HTTP client
+const DefaultTimeout = time.Second * 5
+
+// List of common errors
+var (
+	// ErrNoAccountID is returned if no account ID is given to the corresponding API method
+	ErrNoAccountID = errors.New("no account ID given")
+
+	// ErrNoName is returned if no name is given to the corresponding API method
+	ErrNoName = errors.New("no name given")
+
+	// ErrNonPositiveResponse should be returned if a HTTP request failed with a non HTTP-200 status
+	ErrNonPositiveResponse = errors.New("non HTTP-200 response for HTTP request")
+)
 
 // Client is the HIBP client object
 type Client struct {
@@ -49,7 +65,7 @@ func New(options ...Option) Client {
 	c := Client{}
 
 	// Set defaults
-	c.to = time.Second * 5
+	c.to = DefaultTimeout
 	c.PwnedPassAPIOpts = &PwnedPasswordOptions{}
 	c.ua = DefaultUserAgent
 
@@ -183,7 +199,7 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 	}
 
 	if hr.StatusCode != 200 {
-		return nil, hr, fmt.Errorf("API responded with non HTTP-200: %s - %s", hr.Status, hb)
+		return nil, hr, fmt.Errorf("HTTP %s: %w", hr.Status, ErrNonPositiveResponse)
 	}
 
 	return hb, hr, nil
@@ -191,18 +207,18 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 
 // httpClient returns a custom http client for the HIBP Client object
 func httpClient(to time.Duration) *http.Client {
-	tlsConfig := &tls.Config{
+	tc := &tls.Config{
 		MaxVersion: tls.VersionTLS13,
 		MinVersion: tls.VersionTLS12,
 	}
-	httpTransport := &http.Transport{TLSClientConfig: tlsConfig}
-	httpClient := &http.Client{
-		Transport: httpTransport,
-		Timeout:   5 * time.Second,
+	ht := &http.Transport{TLSClientConfig: tc}
+	hc := &http.Client{
+		Transport: ht,
+		Timeout:   DefaultTimeout,
 	}
 	if to.Nanoseconds() > 0 {
-		httpClient.Timeout = to
+		hc.Timeout = to
 	}
 
-	return httpClient
+	return hc
 }
