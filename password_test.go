@@ -93,6 +93,20 @@ func TestPwnedPassAPI_CheckPassword_NTLM(t *testing.T) {
 	}
 }
 
+// TestPwnedPassAPI_CheckPassword_failed verifies the Pwned Passwords API with the CheckPassword method
+// with intentionally failing requests
+func TestPwnedPassAPI_CheckPassword_failed(t *testing.T) {
+	hc := New()
+	hc.PwnedPassAPIOpts.HashMode = 99
+	_, _, err := hc.PwnedPassAPI.CheckPassword(PwStringInsecure)
+	if err == nil {
+		t.Error("CheckPassword with unsupported HashMode was supposed to fail, but didn't")
+	}
+	if !errors.Is(err, ErrUnsupportedHashMode) {
+		t.Errorf("CheckPassword wrong error, expected: %s, got: %s", ErrUnsupportedHashMode, err)
+	}
+}
+
 // TestPwnedPassAPI_CheckSHA1 verifies the Pwned Passwords API with the CheckSHA1 method
 func TestPwnedPassAPI_CheckSHA1(t *testing.T) {
 	testTable := []struct {
@@ -203,6 +217,16 @@ func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 	_, _, err = hc.PwnedPassAPI.ListHashesPrefix(string([]byte{0, 0, 0, 0, 0}))
 	if err == nil {
 		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
+	}
+
+	// Should fall back to SHA-1
+	hc.PwnedPassAPIOpts.HashMode = 99
+	l, _, err = hc.PwnedPassAPI.ListHashesPrefix("a94a8")
+	if err != nil {
+		t.Errorf("ListHashesPrefix was not supposed to fail, but did: %s", err)
+	}
+	if len(l) <= 0 {
+		t.Errorf("ListHashesPrefix was supposed to return a list longer than 0")
 	}
 }
 
@@ -364,11 +388,35 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 	if len(l) <= 0 {
 		t.Errorf("ListHashesPassword was supposed to return a list longer than 0")
 	}
+}
 
-	// Empty string has no checksum
-	_, _, err = hc.PwnedPassAPI.ListHashesSHA1("")
+// TestPwnedPassAPI_ListHashesPassword_failed tests the PwnedPassAPI.ListHashesPassword metethod
+// with a unsupported HashMode
+func TestPwnedPassAPI_ListHashesPassword_failed(t *testing.T) {
+	hc := New()
+	hc.PwnedPassAPIOpts.HashMode = 99
+
+	_, _, err := hc.PwnedPassAPI.ListHashesPassword(PwStringInsecure)
 	if err == nil {
-		t.Errorf("ListHashesPassword was supposed to fail, but didn't")
+		t.Error("ListHashesPassword with unspported HashMode was supposed to fail, but didn't")
+	}
+	if !errors.Is(err, ErrUnsupportedHashMode) {
+		t.Errorf("ListHashesPassword error does not match, expected: %s, got: %s", ErrUnsupportedHashMode, err)
+	}
+}
+
+// TestPwnedPassAPI_ListHashesPasswordNTLM tests the PwnedPassAPI.ListHashesPassword metethod
+// with NTLM HashMode
+func TestPwnedPassAPI_ListHashesPasswordNTLM(t *testing.T) {
+	hc := New(WithPwnedNTLMHash())
+
+	// List length should be >0
+	l, _, err := hc.PwnedPassAPI.ListHashesPassword(PwStringInsecure)
+	if err != nil {
+		t.Errorf("ListHashesPassword was not supposed to fail, but did: %s", err)
+	}
+	if len(l) <= 0 {
+		t.Errorf("ListHashesPassword was supposed to return a list longer than 0")
 	}
 }
 
