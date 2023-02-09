@@ -37,8 +37,22 @@ func TestNewWithHttpTimeout(t *testing.T) {
 func TestNewWithPwnedPadding(t *testing.T) {
 	hc := New(WithPwnedPadding())
 	if !hc.PwnedPassAPIOpts.WithPadding {
-		t.Errorf("hibp client pwned padding option was not set properly. Expected %v, got: %v",
+		t.Errorf("hibp client pwned padding option was not set properly. Expected %t, got: %t",
 			true, hc.PwnedPassAPIOpts.WithPadding)
+	}
+}
+
+// TestNewWithPwnedNTLMHash tests the New() function with the PwnedPadding option
+func TestNewWithPwnedNTLMHash(t *testing.T) {
+	hc := New(WithPwnedNTLMHash())
+	if hc.PwnedPassAPIOpts.HashMode != HashModeNTLM {
+		t.Errorf("hibp client NTLM hash mode option was not set properly. Expected %d, got: %d",
+			HashModeNTLM, hc.PwnedPassAPIOpts.HashMode)
+	}
+	hc = New()
+	if hc.PwnedPassAPIOpts.HashMode != HashModeSHA1 {
+		t.Errorf("hibp client SHA-1 hash mode option was not set properly. Expected %d, got: %d",
+			HashModeSHA1, hc.PwnedPassAPIOpts.HashMode)
 	}
 }
 

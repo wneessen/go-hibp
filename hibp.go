@@ -49,8 +49,18 @@ var (
 	// expected length
 	ErrSHA1LengthMismatch = errors.New("SHA1 hash size needs to be 160 bits")
 
+	// ErrNTLMLengthMismatch should be used if a given NTLM hash does not match the
+	// expected length
+	ErrNTLMLengthMismatch = errors.New("NTLM hash size needs to be 128 bits")
+
 	// ErrSHA1Invalid should be used if a given string does not represent a valid SHA1 hash
 	ErrSHA1Invalid = errors.New("not a valid SHA1 hash")
+
+	// ErrNTLMInvalid should be used if a given string does not represent a valid NTLM hash
+	ErrNTLMInvalid = errors.New("not a valid NTLM hash")
+
+	// ErrUnsupportedHashMode should be used if a given hash mode is not supported
+	ErrUnsupportedHashMode = errors.New("hash mode not supported")
 )
 
 // Client is the HIBP client object
@@ -80,7 +90,10 @@ func New(options ...Option) Client {
 
 	// Set defaults
 	c.to = DefaultTimeout
-	c.PwnedPassAPIOpts = &PwnedPasswordOptions{}
+	c.PwnedPassAPIOpts = &PwnedPasswordOptions{
+		HashMode:    HashModeSHA1,
+		WithPadding: false,
+	}
 	c.ua = DefaultUserAgent
 
 	// Set additional options
@@ -95,7 +108,10 @@ func New(options ...Option) Client {
 	c.hc = httpClient(c.to)
 
 	// Associate the different HIBP service APIs with the Client
-	c.PwnedPassAPI = &PwnedPassAPI{hibp: &c}
+	c.PwnedPassAPI = &PwnedPassAPI{
+		hibp:     &c,
+		ParamMap: make(map[string]string),
+	}
 	c.BreachAPI = &BreachAPI{hibp: &c}
 	c.PasteAPI = &PasteAPI{hibp: &c}
 
@@ -137,6 +153,18 @@ func WithUserAgent(a string) Option {
 func WithRateLimitSleep() Option {
 	return func(c *Client) {
 		c.rlSleep = true
+	}
+}
+
+// WithPwnedNTLMHash sets the hash mode for the PwnedPasswords API to NTLM hashes
+//
+// Note: This option only affects the generic methods like PwnedPassAPI.CheckPassword
+// or PwnedPassAPI.ListHashesPassword. For any specifc method with the hash type in
+// the method name, this option is ignored and the hash type of the function is
+// forced
+func WithPwnedNTLMHash() Option {
+	return func(c *Client) {
+		c.PwnedPassAPIOpts.HashMode = HashModeNTLM
 	}
 }
 
