@@ -8,11 +8,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf16"
+
+	"github.com/wneessen/go-hibp/md4"
 )
 
 // PwnedPassAPI is a HIBP Pwned Passwords API client
 type PwnedPassAPI struct {
-	hibp *Client // References back to the parent HIBP client
+	// References back to the parent HIBP client
+	hibp *Client
+	// Query parameter map for additional query parameters passed to request
+	ParamMap map[string]string
 }
 
 // Match represents a match in the Pwned Passwords API
@@ -21,17 +27,44 @@ type Match struct {
 	Count int64  // Represents the number of leaked accounts that hold/held this password
 }
 
+type HashMode int
+
+const (
+	// HashModeSHA1 is the default hash mode expecting SHA-1 hashes
+	HashModeSHA1 HashMode = iota
+	// HashModeNTLM represents the mode that expects and returns NTLM hashes
+	HashModeNTLM
+)
+
 // PwnedPasswordOptions is a struct of additional options for the PP API
 type PwnedPasswordOptions struct {
+	// HashMode controls whether the provided hash is in SHA-1 or NTLM format
+	// HashMode defaults to SHA-1 and can be overridden using the WithNTLMHash() Option
+	// See: https://haveibeenpwned.com/API/v3#PwnedPasswordsNTLM
+	HashMode HashMode
+
 	// WithPadding controls if the PwnedPassword API returns with padding or not
 	// See: https://haveibeenpwned.com/API/v3#PwnedPasswordsPadding
 	WithPadding bool
 }
 
 // CheckPassword checks the Pwned Passwords database against a given password string
+//
+// This method will automatically decide whether the hash is in SHA-1 or NTLM format based on
+// the Option when the Client was initialized
 func (p *PwnedPassAPI) CheckPassword(pw string) (*Match, *http.Response, error) {
-	shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
-	return p.CheckSHA1(shaSum)
+	switch p.hibp.PwnedPassAPIOpts.HashMode {
+	case HashModeSHA1:
+		shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
+		return p.CheckSHA1(shaSum)
+	case HashModeNTLM:
+		d := md4.New()
+		d.Write(stringToUTF16(pw))
+		md4Sum := fmt.Sprintf("%x", d.Sum(nil))
+		return p.CheckNTLM(md4Sum)
+	default:
+		return nil, nil, ErrUnsupportedHashMode
+	}
 }
 
 // CheckSHA1 checks the Pwned Passwords database against a given SHA1 checksum of a password string
@@ -40,13 +73,34 @@ func (p *PwnedPassAPI) CheckSHA1(h string) (*Match, *http.Response, error) {
 		return nil, nil, ErrSHA1LengthMismatch
 	}
 
+	p.hibp.PwnedPassAPIOpts.HashMode = HashModeSHA1
 	pwMatches, hr, err := p.ListHashesPrefix(h[:5])
 	if err != nil {
 		return &Match{}, hr, err
 	}
 
 	for _, m := range pwMatches {
-		if m.Hash == h {
+		if m.Hash == strings.ToLower(h) {
+			return &m, hr, nil
+		}
+	}
+	return nil, hr, nil
+}
+
+// CheckNTLM checks the Pwned Passwords database against a given NTLM hash of a password string
+func (p *PwnedPassAPI) CheckNTLM(h string) (*Match, *http.Response, error) {
+	if len(h) != 32 {
+		return nil, nil, ErrNTLMLengthMismatch
+	}
+
+	p.hibp.PwnedPassAPIOpts.HashMode = HashModeNTLM
+	pwMatches, hr, err := p.ListHashesPrefix(h[:5])
+	if err != nil {
+		return &Match{}, hr, err
+	}
+
+	for _, m := range pwMatches {
+		if m.Hash == strings.ToLower(h) {
 			return &m, hr, nil
 		}
 	}
@@ -56,11 +110,24 @@ func (p *PwnedPassAPI) CheckSHA1(h string) (*Match, *http.Response, error) {
 // ListHashesPassword checks the Pwned Password API endpoint for all hashes based on a given
 // password string and returns the a slice of Match as well as the http.Response
 //
+// This method will automatically decide whether the hash is in SHA-1 or NTLM format based on
+// the Option when the Client was initialized
+//
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
 func (p *PwnedPassAPI) ListHashesPassword(pw string) ([]Match, *http.Response, error) {
-	shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
-	return p.ListHashesSHA1(shaSum)
+	switch p.hibp.PwnedPassAPIOpts.HashMode {
+	case HashModeSHA1:
+		shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
+		return p.ListHashesSHA1(shaSum)
+	case HashModeNTLM:
+		d := md4.New()
+		d.Write(stringToUTF16(pw))
+		md4Sum := fmt.Sprintf("%x", d.Sum(nil))
+		return p.ListHashesNTLM(md4Sum)
+	default:
+		return nil, nil, ErrUnsupportedHashMode
+	}
 }
 
 // ListHashesSHA1 checks the Pwned Password API endpoint for all hashes based on a given
@@ -72,6 +139,7 @@ func (p *PwnedPassAPI) ListHashesSHA1(h string) ([]Match, *http.Response, error)
 	if len(h) != 40 {
 		return nil, nil, ErrSHA1LengthMismatch
 	}
+	p.hibp.PwnedPassAPIOpts.HashMode = HashModeSHA1
 	dst := make([]byte, hex.DecodedLen(len(h)))
 	if _, err := hex.Decode(dst, []byte(h)); err != nil {
 		return nil, nil, ErrSHA1Invalid
@@ -79,8 +147,28 @@ func (p *PwnedPassAPI) ListHashesSHA1(h string) ([]Match, *http.Response, error)
 	return p.ListHashesPrefix(h[:5])
 }
 
+// ListHashesNTLM checks the Pwned Password API endpoint for all hashes based on a given
+// NTLM hash and returns the a slice of Match as well as the http.Response
+//
+// NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
+// contain junk data
+func (p *PwnedPassAPI) ListHashesNTLM(h string) ([]Match, *http.Response, error) {
+	if len(h) != 32 {
+		return nil, nil, ErrNTLMLengthMismatch
+	}
+	p.hibp.PwnedPassAPIOpts.HashMode = HashModeNTLM
+	dst := make([]byte, hex.DecodedLen(len(h)))
+	if _, err := hex.Decode(dst, []byte(h)); err != nil {
+		return nil, nil, ErrNTLMInvalid
+	}
+	return p.ListHashesPrefix(h[:5])
+}
+
 // ListHashesPrefix checks the Pwned Password API endpoint for all hashes based on a given
-// SHA1 checksum prefix and returns the a slice of Match as well as the http.Response
+// SHA-1 or NTLM hash prefix and returns the a slice of Match as well as the http.Response
+//
+// To decide which HashType is queried for, make sure to set the appropriate HashMode in
+// the PwnedPassAPI struct
 //
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
@@ -89,8 +177,16 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 		return nil, nil, ErrPrefixLengthMismatch
 	}
 
+	switch p.hibp.PwnedPassAPIOpts.HashMode {
+	case HashModeSHA1:
+		delete(p.ParamMap, "mode")
+	case HashModeNTLM:
+		p.ParamMap["mode"] = "ntlm"
+	default:
+		delete(p.ParamMap, "mode")
+	}
 	au := fmt.Sprintf("%s/range/%s", PasswdBaseURL, pf)
-	hreq, err := p.hibp.HTTPReq(http.MethodGet, au, nil)
+	hreq, err := p.hibp.HTTPReq(http.MethodGet, au, p.ParamMap)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,4 +224,15 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 	}
 
 	return pm, hr, nil
+}
+
+// stringToUTF16 converts a given string to a UTF-16 little-endian encoded byte slice
+func stringToUTF16(s string) []byte {
+	e := utf16.Encode([]rune(s))
+	r := make([]byte, len(e)*2)
+	for i := 0; i < len(e); i++ {
+		r[i*2] = byte(e[i])
+		r[i*2+1] = byte(e[i] << 8)
+	}
+	return r
 }
