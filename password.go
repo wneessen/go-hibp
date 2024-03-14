@@ -205,6 +205,9 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 	so := bufio.NewScanner(hr.Body)
 	for so.Scan() {
 		hp := strings.SplitN(so.Text(), ":", 2)
+		if len(hp) != 2 {
+			continue
+		}
 		fh := fmt.Sprintf("%s%s", strings.ToLower(pf), strings.ToLower(hp[0]))
 		hc, err := strconv.ParseInt(hp[1], 10, 64)
 		if err != nil {
