@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -88,11 +87,39 @@ type Breach struct {
 	LogoPath string `json:"LogoPath"`
 }
 
+type SubscribedDomains struct {
+	// DomainName is the full domain name that has been successfully verified.
+	DomainName string `json:"DomainName"`
+
+	// PwnCount is the total number of breached email addresses found on the domain at last search
+	// (will be null if no searches yet performed).
+	PwnCount *int `json:"PwnCount"`
+
+	// PwnCountExcludingSpamLists is the number of breached email addresses found on the domain
+	// at last search, excluding any breaches flagged as a spam list (will be null if no
+	// searches yet performed).
+	PwnCountExcludingSpamLists *int `json:"PwnCountExcludingSpamLists"`
+
+	// The total number of breached email addresses found on the domain when the current
+	// subscription was taken out (will be null if no searches yet performed). This number
+	// ensures the domain remains searchable throughout the subscription period even if the
+	// volume of breached accounts grows beyond the subscription's scope.
+	PwnCountExcludingSpamListsAtLastSubscriptionRenewal *int `json:"PwnCountExcludingSpamListsAtLastSubscriptionRenewal"`
+
+	// The date and time the current subscription ends in ISO 8601 format. The
+	// PwnCountExcludingSpamListsAtLastSubscriptionRenewal value is locked in until this time (will
+	// be null if there have been no subscriptions).
+	NextSubscriptionRenewal RenewalTime `json:"NextSubscriptionRenewal"`
+}
+
 // BreachOption is an additional option the can be set for the BreachApiClient
 type BreachOption func(*BreachAPI)
 
 // APIDate is a date string without time returned by the API represented as time.Time type
 type APIDate time.Time
+
+// RenewalTime is a timestamp returned by the API that doesn't have timezone information
+type RenewalTime time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
 func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
@@ -173,6 +200,42 @@ func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]*Breac
 	return bd, hr, nil
 }
 
+// SubscribedDomains returns domains that have been successfully added to the domain
+// search dashboard after verifying control are returned via this API. This is an
+// authenticated API requiring an HIBP API key which will then return all domains associated with that key.
+func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, error) {
+	au := fmt.Sprintf("%s/subscribeddomains", BaseURL)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
+	if err != nil {
+		return nil, hr, err
+	}
+
+	var bd []SubscribedDomains
+	if err := json.Unmarshal(hb, &bd); err != nil {
+		return nil, hr, err
+	}
+
+	return bd, hr, nil
+}
+
+// BreachedDomain returns all email addresses on a given domain and the breaches they've appeared
+// in can be returned via the domain search API. Only domains that have been successfully added
+// to the domain search dashboard after verifying control can be searched.
+func (b *BreachAPI) BreachedDomain(domain string) (map[string][]string, *http.Response, error) {
+	au := fmt.Sprintf("%s/breacheddomain/%s", BaseURL, domain)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
+	if err != nil {
+		return nil, hr, err
+	}
+
+	var bd map[string][]string
+	if err := json.Unmarshal(hb, &bd); err != nil {
+		return nil, hr, err
+	}
+
+	return bd, hr, nil
+}
+
 // WithDomain sets the domain filter for the breaches API
 func WithDomain(d string) BreachOption {
 	return func(b *BreachAPI) {
@@ -197,9 +260,8 @@ func WithoutUnverified() BreachOption {
 
 // UnmarshalJSON for the APIDate type converts a give date string into a time.Time type
 func (d *APIDate) UnmarshalJSON(s []byte) error {
-	ds := string(s)
-	ds = strings.ReplaceAll(ds, `"`, ``)
-	if ds == "null" {
+	ds := string(s[1 : len(s)-1])
+	if ds == "null" || ds == "" {
 		return nil
 	}
 
@@ -214,6 +276,28 @@ func (d *APIDate) UnmarshalJSON(s []byte) error {
 
 // Time adds a Time() method to the APIDate converted time.Time type
 func (d *APIDate) Time() time.Time {
+	dp := *d
+	return time.Time(dp)
+}
+
+// UnmarshalJSON for the RenewalTime type converts a give date string into a time.Time type
+func (d *RenewalTime) UnmarshalJSON(s []byte) error {
+	ds := string(s[1 : len(s)-1])
+	if ds == "null" || ds == "" {
+		return nil
+	}
+
+	pd, err := time.Parse("2006-01-02T15:04:05", ds)
+	if err != nil {
+		return fmt.Errorf("convert API date string to time.Time type: %w", err)
+	}
+
+	*(*time.Time)(d) = pd
+	return nil
+}
+
+// Time adds a Time() method to the RenewalTime converted time.Time type
+func (d *RenewalTime) Time() time.Time {
 	dp := *d
 	return time.Time(dp)
 }
