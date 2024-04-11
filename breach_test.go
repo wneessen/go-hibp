@@ -310,6 +310,76 @@ func TestBreachAPI_BreachedAccount_WithoutTruncate(t *testing.T) {
 	}
 }
 
+// TestBreachAPI_SubscribedDomains tests the SubscribedDomains() method of the breaches API
+func TestBreachAPI_SubscribedDomains(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
+
+	domains, _, err := hc.BreachAPI.SubscribedDomains()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(domains) < 1 {
+		t.Log("no subscribed domains found with provided api key")
+		t.SkipNow()
+	}
+
+	for i, domain := range domains {
+		t.Run(fmt.Sprintf("checking domain %d", i), func(t *testing.T) {
+			if domain.DomainName == "" {
+				t.Error("domain name is missing")
+			}
+
+			if domain.NextSubscriptionRenewal.Time().IsZero() {
+				t.Error("next subscription renewal is missing")
+			}
+		})
+	}
+}
+
+// TestBreachAPI_BreachedDomain tests the BreachedDomain() method of the breaches API
+func TestBreachAPI_BreachedDomain(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
+	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
+
+	domains, _, err := hc.BreachAPI.SubscribedDomains()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(domains) < 1 {
+		t.Log("no subscribed domains found with provided api key")
+		t.SkipNow()
+	}
+
+	for i, domain := range domains {
+		t.Run(fmt.Sprintf("checking domain %d", i), func(t *testing.T) {
+			breaches, _, err := hc.BreachAPI.BreachedDomain(domain.DomainName)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if len(breaches) < 1 {
+				t.Logf("domain %s contains no breaches", domain.DomainName)
+				t.SkipNow()
+			}
+
+			for alias, list := range breaches {
+				if l := len(list); l == 0 {
+					t.Errorf("alias %s contains %d breaches, there should be at least 1", alias, l)
+				}
+			}
+		})
+	}
+}
+
 // TestAPIDate_UnmarshalJSON_Time tests the APIDate type JSON unmarshalling
 func TestAPIDate_UnmarshalJSON_Time(t *testing.T) {
 	type testData struct {
