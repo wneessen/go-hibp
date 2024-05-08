@@ -161,6 +161,22 @@ func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (*Breach, *h
 	return bd, hr, nil
 }
 
+// LatestBreach returns the single most recent breach
+func (b *BreachAPI) LatestBreach() (*Breach, *http.Response, error) {
+	au := fmt.Sprintf("%s/latestbreach", BaseURL)
+	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
+	if err != nil {
+		return nil, hr, err
+	}
+
+	var bd *Breach
+	if err := json.Unmarshal(hb, &bd); err != nil {
+		return nil, hr, err
+	}
+
+	return bd, hr, nil
+}
+
 // DataClasses are attribute of a record compromised in a breach. This method returns a list of strings
 // with all registered data classes known to HIBP
 func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
