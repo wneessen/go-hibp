@@ -162,6 +162,20 @@ func TestBreachAPI_BreachByName_Errors(t *testing.T) {
 	}
 }
 
+// TestBreachAPI_LatestBreach tests the LatestBreach method of the breaches API
+func TestBreachAPI_LatestBreach(t *testing.T) {
+	hc := New()
+	breach, _, err := hc.BreachAPI.LatestBreach()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if breach == nil {
+		t.Error("No breach returned")
+	}
+}
+
 // TestBreachAPI_DataClasses tests the DataClasses() method of the breaches API
 func TestBreachAPI_DataClasses(t *testing.T) {
 	hc := New()
