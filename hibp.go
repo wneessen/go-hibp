@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -73,6 +72,7 @@ type Client struct {
 	// If set to true, the HTTP client will sleep instead of failing in case the HTTP 429
 	// rate limit hits a request
 	rlSleep bool
+	logger  io.Writer // The custom logger.
 
 	PwnedPassAPI     *PwnedPassAPI         // Reference to the PwnedPassAPI API
 	PwnedPassAPIOpts *PwnedPasswordOptions // Additional options for the PwnedPassAPI API
@@ -168,6 +168,13 @@ func WithPwnedNTLMHash() Option {
 	}
 }
 
+// WithLogger sets the logger.
+func WithLogger(w io.Writer) Option {
+	return func(c *Client) {
+		c.logger = w
+	}
+}
+
 // HTTPReq performs an HTTP request to the corresponding API
 func (c *Client) HTTPReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
@@ -235,7 +242,9 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 		if err != nil {
 			return nil, hr, err
 		}
-		log.Printf("API rate limit hit. Retrying request in %s", delayTime.String())
+		if c.logger != nil {
+			c.logger.Write([]byte(fmt.Sprintf("API rate limit hit. Retrying request in %s\n", delayTime.String())))
+		}
 		time.Sleep(delayTime)
 		return c.HTTPResBody(m, p, q)
 	}
