@@ -88,6 +88,17 @@ func TestNewWithUserAgent(t *testing.T) {
 	}
 }
 
+// TestNewWithHTTPClient tests the New() function with a custom HTTP client
+func TestNewWithHTTPClient(t *testing.T) {
+	customClient := &http.Client{}
+
+	hc := New(WithHTTPClient(customClient))
+	if hc.hc != customClient {
+		t.Errorf("hibp client custom http client option was not set properly. Expected %v, got: %v",
+			customClient, hc.hc)
+	}
+}
+
 func TestClient_HTTPReq(t *testing.T) {
 	u1 := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
 	u2 := "this://is.invalid.tld/"
