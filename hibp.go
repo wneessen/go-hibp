@@ -104,8 +104,10 @@ func New(options ...Option) Client {
 		opt(&c)
 	}
 
-	// Add a http client to the Client object
-	c.hc = httpClient(c.to)
+	if c.hc == nil {
+		// Add a http client to the Client object
+		c.hc = httpClient(c.to)
+	}
 
 	// Associate the different HIBP service APIs with the Client
 	c.PwnedPassAPI = &PwnedPassAPI{
@@ -165,6 +167,13 @@ func WithRateLimitSleep() Option {
 func WithPwnedNTLMHash() Option {
 	return func(c *Client) {
 		c.PwnedPassAPIOpts.HashMode = HashModeNTLM
+	}
+}
+
+// WithHTTPClient sets a custom http client to the HIBP client object
+func WithHTTPClient(hc *http.Client) Option {
+	return func(c *Client) {
+		c.hc = hc
 	}
 }
 

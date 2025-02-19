@@ -89,6 +89,17 @@ func TestNewWithUserAgent(t *testing.T) {
 	}
 }
 
+// TestNewWithHTTPClient tests the New() function with a custom HTTP client
+func TestNewWithHTTPClient(t *testing.T) {
+	customClient := &http.Client{}
+
+	hc := New(WithHTTPClient(customClient))
+	if hc.hc != customClient {
+		t.Errorf("hibp client custom http client option was not set properly. Expected %v, got: %v",
+			customClient, hc.hc)
+	}
+}
+
 // TestNewWithLogger tests the New() function with a custom logger
 func TestNewWithLogger(t *testing.T) {
 	hc := New()
