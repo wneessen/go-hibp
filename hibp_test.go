@@ -1,6 +1,7 @@
 package hibp
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
 	"os"
@@ -85,6 +86,37 @@ func TestNewWithUserAgent(t *testing.T) {
 	if hc.ua != DefaultUserAgent {
 		t.Errorf("hibp client custom user agent was not set properly. Expected %s, got: %s",
 			DefaultUserAgent, hc.ua)
+	}
+}
+
+// TestNewWithHTTPClient tests the New() function with a custom HTTP client
+func TestNewWithHTTPClient(t *testing.T) {
+	customClient := &http.Client{}
+
+	hc := New(WithHTTPClient(customClient))
+	if hc.hc != customClient {
+		t.Errorf("hibp client custom http client option was not set properly. Expected %v, got: %v",
+			customClient, hc.hc)
+	}
+}
+
+// TestNewWithLogger tests the New() function with a custom logger
+func TestNewWithLogger(t *testing.T) {
+	hc := New()
+	if hc.logger != nil {
+		t.Errorf("hibp client logger was not nil. Expected nil, got: %p", hc.logger)
+	}
+
+	customerLogger := &bufio.Writer{}
+	hc = New(WithLogger(customerLogger))
+	if hc.logger != customerLogger {
+		t.Errorf("hibp client custom logger was not set properly. Expected %p, got: %p",
+			customerLogger, hc.logger)
+	}
+
+	hc = New(WithLogger(nil))
+	if hc.logger != nil {
+		t.Errorf("hibp client custom logger was not set properly. Expected nil, got: %p", hc.logger)
 	}
 }
 

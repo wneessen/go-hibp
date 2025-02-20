@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -73,6 +72,7 @@ type Client struct {
 	// If set to true, the HTTP client will sleep instead of failing in case the HTTP 429
 	// rate limit hits a request
 	rlSleep bool
+	logger  io.Writer // The custom logger.
 
 	PwnedPassAPI     *PwnedPassAPI         // Reference to the PwnedPassAPI API
 	PwnedPassAPIOpts *PwnedPasswordOptions // Additional options for the PwnedPassAPI API
@@ -105,8 +105,10 @@ func New(options ...Option) Client {
 		opt(&c)
 	}
 
-	// Add a http client to the Client object
-	c.hc = httpClient(c.to)
+	if c.hc == nil {
+		// Add a http client to the Client object
+		c.hc = httpClient(c.to)
+	}
 
 	// Associate the different HIBP service APIs with the Client
 	c.PwnedPassAPI = &PwnedPassAPI{
@@ -167,6 +169,20 @@ func WithRateLimitSleep() Option {
 func WithPwnedNTLMHash() Option {
 	return func(c *Client) {
 		c.PwnedPassAPIOpts.HashMode = HashModeNTLM
+	}
+}
+
+// WithHTTPClient sets a custom http client to the HIBP client object
+func WithHTTPClient(hc *http.Client) Option {
+	return func(c *Client) {
+		c.hc = hc
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(w io.Writer) Option {
+	return func(c *Client) {
+		c.logger = w
 	}
 }
 
@@ -237,7 +253,9 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 		if err != nil {
 			return nil, hr, err
 		}
-		log.Printf("API rate limit hit. Retrying request in %s", delayTime.String())
+		if c.logger != nil {
+			c.logger.Write([]byte(fmt.Sprintf("API rate limit hit. Retrying request in %s\n", delayTime.String())))
+		}
 		time.Sleep(delayTime)
 		return c.HTTPResBody(m, p, q)
 	}
