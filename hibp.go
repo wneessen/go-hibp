@@ -77,8 +77,9 @@ type Client struct {
 	PwnedPassAPI     *PwnedPassAPI         // Reference to the PwnedPassAPI API
 	PwnedPassAPIOpts *PwnedPasswordOptions // Additional options for the PwnedPassAPI API
 
-	BreachAPI *BreachAPI // Reference to the BreachAPI
-	PasteAPI  *PasteAPI  // Reference to the PasteAPI
+	BreachAPI       *BreachAPI       // Reference to the BreachAPI
+	PasteAPI        *PasteAPI        // Reference to the PasteAPI
+	SubscriptionAPI *SubscriptionAPI // Reference to the SubscriptionAPI
 }
 
 // Option is a function that is used for grouping of Client options.
@@ -114,6 +115,7 @@ func New(options ...Option) Client {
 	}
 	c.BreachAPI = &BreachAPI{hibp: &c}
 	c.PasteAPI = &PasteAPI{hibp: &c}
+	c.SubscriptionAPI = &SubscriptionAPI{hibp: &c}
 
 	return c
 }
