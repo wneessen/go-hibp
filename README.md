@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev> et al
+
+SPDX-License-Identifier: MIT
+-->
+
 # go-hibp - Simple Go binding to the "Have I Been Pwned" API
 
 [![GoDoc](https://godoc.org/github.com/wneessen/go-hibp?status.svg)](https://pkg.go.dev/github.com/wneessen/go-hibp) 
