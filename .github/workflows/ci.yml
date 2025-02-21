@@ -205,7 +205,6 @@ jobs:
               if: success()
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-                  SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
                   HIBP_API_KEY: ${{ secrets.HIBP_API_KEY }}
             - name: SonarQube quality gate
               uses: sonarsource/sonarqube-quality-gate-action@8406f4f1edaffef38e9fb9c53eb292fc1d7684fa # master
