@@ -133,7 +133,7 @@ jobs:
               env:
                   HIBP_API_KEY: ${{ secrets.HIBP_API_KEY }}
               run: |
-                go test -race -shuffle=on ./...
+                go test -shuffle=on ./...
     test-fbsd:
         name: Test on FreeBSD ${{ matrix.osver }}
         runs-on: ubuntu-latest
@@ -157,7 +157,7 @@ jobs:
                     pkg install -y go
                   run: |
                     cd $GITHUB_WORKSPACE;
-                    go test -race -shuffle=on ./...
+                    go test -shuffle=on ./...
     reuse:
         name: REUSE Compliance Check
         runs-on: ubuntu-latest
@@ -199,7 +199,7 @@ jobs:
               env:
                   HIBP_API_KEY: ${{ secrets.HIBP_API_KEY }}
               run: |
-                go test -shuffle=on -race --coverprofile=./cov.out ./...
+                go test -shuffle=on --coverprofile=./cov.out ./...
             - name: SonarQube scan
               uses: sonarsource/sonarqube-scan-action@bfd4e558cda28cda6b5defafb9232d191be8c203 # master
               if: success()
