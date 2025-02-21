@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev> et al
+//
+// SPDX-License-Identifier: MIT
+
 // Package hibp provides Go binding to all 3 APIs of the "Have I Been Pwned" by Troy Hunt
 package hibp
 
