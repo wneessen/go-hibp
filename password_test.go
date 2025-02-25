@@ -155,6 +155,7 @@ func TestPwnedPassAPI_CheckNTLM(t *testing.T) {
 func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked password", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
 		if err != nil {
@@ -166,6 +167,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 	})
 	t.Run("ListHashesPassword in NTLM mode succeeds on leaked password", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		defer server.Close()
 		hc := New(WithPwnedNTLMHash(), WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
 		if err != nil {
@@ -177,6 +179,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 	})
 	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked passwords and padding enabled", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecurePadding))
+		defer server.Close()
 		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
 		if err != nil {
@@ -184,6 +187,86 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 		}
 		if len(m) != 987 {
 			t.Errorf("ListHashesPassword was supposed to return 987 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword with invalid hash mode should fail", func(t *testing.T) {
+		hc := New()
+		hc.PwnedPassAPIOpts.HashMode = 99
+		_, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err == nil {
+			t.Errorf("ListHashesPassword with unsupported hash mode was supposed to fail")
+		}
+		if !errors.Is(err, ErrUnsupportedHashMode) {
+			t.Errorf("ListHashesPassword wrong error, expected: %s, got: %s", ErrUnsupportedHashMode, err)
+		}
+	})
+}
+
+func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
+	t.Run("ListHashesSHA1 fails with too short hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("1234567890abcdef")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with too short hash should fail")
+		}
+		if !errors.Is(err, ErrSHA1LengthMismatch) {
+			t.Errorf("ListHashesSHA1 wrong error, expected: %s, got: %s", ErrSHA1LengthMismatch, err)
+		}
+	})
+	t.Run("ListHashesSHA1 fails with invalid hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1(PwHashInsecure[:39] + "h")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with invalid hash should fail")
+		}
+		if !errors.Is(err, ErrSHA1Invalid) {
+			t.Errorf("ListHashesSHA1 wrong error, expected: %s, got: %s", ErrSHA1Invalid, err)
+		}
+	})
+}
+
+func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
+	t.Run("ListHashesNTLM fails with too short hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("1234567890abcdef")
+		if err == nil {
+			t.Errorf("ListHashesNTLM with too short hash should fail")
+		}
+		if !errors.Is(err, ErrNTLMLengthMismatch) {
+			t.Errorf("ListHashesNTLM wrong error, expected: %s, got: %s", ErrNTLMLengthMismatch, err)
+		}
+	})
+	t.Run("ListHashesNTLM fails with invalid hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesNTLM(PwHashInsecure[:31] + "h")
+		if err == nil {
+			t.Errorf("ListHashesNTLM with invalid hash should fail")
+		}
+		if !errors.Is(err, ErrNTLMInvalid) {
+			t.Errorf("ListHashesNTLM wrong error, expected: %s, got: %s", ErrNTLMInvalid, err)
+		}
+	})
+}
+
+func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
+	t.Run("ListHashesPrefix fails with too short prefix", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("123")
+		if err == nil {
+			t.Errorf("ListHashesPrefix with too short hash should fail")
+		}
+		if !errors.Is(err, ErrPrefixLengthMismatch) {
+			t.Errorf("ListHashesPrefix wrong error, expected: %s, got: %s", ErrPrefixLengthMismatch, err)
 		}
 	})
 }
