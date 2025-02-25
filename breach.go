@@ -136,7 +136,7 @@ func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 	}
 
 	var bl []*Breach
-	if err := json.Unmarshal(hb, &bl); err != nil {
+	if err = json.Unmarshal(hb, &bl); err != nil {
 		return nil, hr, err
 	}
 
@@ -158,7 +158,7 @@ func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (*Breach, *h
 	}
 
 	var bd *Breach
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
@@ -174,7 +174,7 @@ func (b *BreachAPI) LatestBreach() (*Breach, *http.Response, error) {
 	}
 
 	var bd *Breach
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
