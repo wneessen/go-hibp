@@ -6,8 +6,12 @@ package hibp
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -158,4 +162,75 @@ func TestClient_HTTPResBody(t *testing.T) {
 	if err == nil {
 		t.Errorf("HTTP POST request was supposed to fail, but didn't")
 	}
+}
+
+// testClient is a HTTP client that satisfies the HTTPClient interface. We use it for
+// mocking tests
+type testClient struct {
+	*http.Client
+	url string
+}
+
+// Do satisfies the HTTPClient interface for the testClient type. It replaces the request URL
+// in the HTTP request with the given url in the testClient.
+func (c *testClient) Do(req *http.Request) (*http.Response, error) {
+	testURL, err := url.Parse(c.url)
+	if err != nil {
+		return nil, err
+	}
+	req.URL = testURL
+	return c.Client.Do(req)
+}
+
+// newTestClient creates a mock HTTP client for testing purposes with a specified URL and default timeout.
+func newTestClient(t *testing.T, url string) *testClient {
+	t.Helper()
+	client := httpClient(DefaultTimeout)
+	return &testClient{client, url}
+}
+
+// newTestStringHandler creates an HTTP handler that responds with a predefined string for testing purposes.
+// It writes the string to the response and reports errors via the provided testing object.
+func newTestStringHandler(t *testing.T, data string) http.Handler {
+	t.Helper()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, data)
+		if err != nil {
+			t.Errorf("http string handler failed to write string to response writer: %s", err)
+		}
+	})
+}
+
+// newTestFileHandler creates an HTTP handler for serving the content of a test file and reports
+// errors via the testing object.
+func newTestFileHandler(t *testing.T, filename string) http.Handler {
+	t.Helper()
+	file, err := os.Open(filename)
+	if err != nil {
+		t.Fatalf("failed to open test file: %s", err)
+	}
+	buffer := bytes.NewBuffer(nil)
+	_, err = io.Copy(buffer, file)
+	if err != nil {
+		t.Fatalf("failed to read test file to buffer: %s", err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatalf("failed to close test file: %s", err)
+	}
+	return newTestStringHandler(t, buffer.String())
+}
+
+// newTestJSONHandler creates an HTTP handler for testing, responding with the specified JSON data string.
+func newTestJSONHandler(t *testing.T, data interface{}) http.Handler {
+	t.Helper()
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("failed to marshal test JSON data: %s", err)
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err = w.Write(marshalled)
+		if err != nil {
+			t.Errorf("http string handler failed to write string to response writer: %s", err)
+		}
+	})
 }

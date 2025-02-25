@@ -66,9 +66,15 @@ var (
 	ErrUnsupportedHashMode = errors.New("hash mode not supported")
 )
 
+// HTTPClient is an interface representing an HTTP client capable of executing HTTP requests and
+// returning responses.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // Client is the HIBP client object
 type Client struct {
-	hc *http.Client  // HTTP client to perform the API requests
+	hc HTTPClient    // HTTP client to perform the API requests
 	to time.Duration // HTTP client timeout
 	ak string        // HIBP API key
 	ua string        // User agent string for the HTTP client
@@ -177,7 +183,7 @@ func WithPwnedNTLMHash() Option {
 }
 
 // WithHTTPClient sets a custom http client to the HIBP client object
-func WithHTTPClient(hc *http.Client) Option {
+func WithHTTPClient(hc HTTPClient) Option {
 	return func(c *Client) {
 		c.hc = hc
 	}
