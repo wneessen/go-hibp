@@ -10,10 +10,13 @@ import (
 	"net/http"
 )
 
+// SubscriptionAPI provides methods to interact with the subscription endpoint of the HIBP API.
 type SubscriptionAPI struct {
 	hibp *Client // References back to the parent HIBP client
 }
 
+// SubscriptionStatus represents the details of a subscription including its name, description, expiration,
+// and limitations.
 type SubscriptionStatus struct {
 	// SubscriptionName is the name representing the subscription being either "Pwned 1", "Pwned 2", "Pwned 3" or "Pwned 4".
 	SubscriptionName string `json:"SubscriptionName"`
@@ -38,7 +41,7 @@ func (s *SubscriptionAPI) Status() (*SubscriptionStatus, *http.Response, error) 
 	}
 
 	var subscriptionStatus *SubscriptionStatus
-	if err := json.Unmarshal(hb, &subscriptionStatus); err != nil {
+	if err = json.Unmarshal(hb, &subscriptionStatus); err != nil {
 		return nil, hr, err
 	}
 
