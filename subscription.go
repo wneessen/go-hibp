@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/wneessen/niljson"
 )
 
 // SubscriptionAPI provides methods to interact with the subscription endpoint of the HIBP API.
@@ -29,7 +31,7 @@ type SubscriptionStatus struct {
 	// DomainSearchMaxBreachedAccounts is the size of the largest domain the subscription can search.
 	// This is expressed in the total number of breached accounts on the domain, excluding those that appear solely in spam list.
 	// This will be nil if there is no limit.
-	DomainSearchMaxBreachedAccounts *int `json:"DomainSearchMaxBreachedAccounts"`
+	DomainSearchMaxBreachedAccounts niljson.NilInt `json:"DomainSearchMaxBreachedAccounts"`
 }
 
 // Status returns details of the current subscription.
