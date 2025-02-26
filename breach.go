@@ -236,7 +236,7 @@ func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]Breach
 
 // SubscribedDomains returns domains that have been successfully added to the domain
 // search dashboard after verifying control are returned via this API.
-// This API is authenticated and requires a valid API key
+// This API is authenticated and requires a valid API key.
 //
 // Reference: https://haveibeenpwned.com/API/v3#SubscribedDomains
 func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, error) {
@@ -247,7 +247,7 @@ func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, er
 	}
 
 	var bd []SubscribedDomains
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
@@ -257,15 +257,21 @@ func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, er
 // BreachedDomain returns all email addresses on a given domain and the breaches they've appeared
 // in can be returned via the domain search API. Only domains that have been successfully added
 // to the domain search dashboard after verifying control can be searched.
+// This API is authenticated and requires a valid API key.
+//
+// https://haveibeenpwned.com/API/v3#BreachesForDomain
 func (b *BreachAPI) BreachedDomain(domain string) (map[string][]string, *http.Response, error) {
+	var bd map[string][]string
 	au := fmt.Sprintf("%s/breacheddomain/%s", BaseURL, domain)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
+		if hr != nil && hr.StatusCode == http.StatusNotFound {
+			return bd, nil, nil
+		}
 		return nil, hr, err
 	}
 
-	var bd map[string][]string
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
