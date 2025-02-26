@@ -113,17 +113,11 @@ type SubscribedDomains struct {
 	// The date and time the current subscription ends in ISO 8601 format. The
 	// PwnCountExcludingSpamListsAtLastSubscriptionRenewal value is locked in until this time (will
 	// be null if there have been no subscriptions).
-	NextSubscriptionRenewal RenewalTime `json:"NextSubscriptionRenewal"`
+	NextSubscriptionRenewal APIDate `json:"NextSubscriptionRenewal"`
 }
 
 // BreachOption is an additional option the can be set for the BreachApiClient
 type BreachOption func(*BreachAPI)
-
-// APIDate is a date string without time returned by the API represented as time.Time type
-type APIDate time.Time
-
-// RenewalTime is a timestamp returned by the API that doesn't have timezone information
-type RenewalTime time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
 func (b *BreachAPI) Breaches(options ...BreachOption) ([]Breach, *http.Response, error) {
@@ -276,50 +270,6 @@ func WithoutUnverified() BreachOption {
 	return func(b *BreachAPI) {
 		b.noUnverified = true
 	}
-}
-
-// UnmarshalJSON for the APIDate type converts a give date string into a time.Time type
-func (d *APIDate) UnmarshalJSON(s []byte) error {
-	ds := string(s[1 : len(s)-1])
-	if ds == "null" || ds == "" {
-		return nil
-	}
-
-	pd, err := time.Parse("2006-01-02", ds)
-	if err != nil {
-		return fmt.Errorf("convert API date string to time.Time type: %w", err)
-	}
-
-	*(*time.Time)(d) = pd
-	return nil
-}
-
-// Time adds a Time() method to the APIDate converted time.Time type
-func (d *APIDate) Time() time.Time {
-	dp := *d
-	return time.Time(dp)
-}
-
-// UnmarshalJSON for the RenewalTime type converts a give date string into a time.Time type
-func (d *RenewalTime) UnmarshalJSON(s []byte) error {
-	ds := string(s[1 : len(s)-1])
-	if ds == "null" || ds == "" {
-		return nil
-	}
-
-	pd, err := time.Parse("2006-01-02T15:04:05", ds)
-	if err != nil {
-		return fmt.Errorf("convert API date string to time.Time type: %w", err)
-	}
-
-	*(*time.Time)(d) = pd
-	return nil
-}
-
-// Time adds a Time() method to the RenewalTime converted time.Time type
-func (d *RenewalTime) Time() time.Time {
-	dp := *d
-	return time.Time(dp)
 }
 
 // setBreachOpts returns a map of default settings and overridden values from different BreachOption

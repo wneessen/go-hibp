@@ -636,7 +636,7 @@ func TestBreachAPI_SubscribedDomains(t *testing.T) {
 				t.Error("domain name is missing")
 			}
 
-			if domain.NextSubscriptionRenewal.Time().IsZero() {
+			if domain.NextSubscriptionRenewal.IsZero() {
 				t.Error("next subscription renewal is missing")
 			}
 		})
@@ -711,7 +711,7 @@ func TestAPIDate_UnmarshalJSON_Time(t *testing.T) {
 				return
 			}
 			if !tc.nil {
-				tdd := td.Date.Time().Format("2006-01-02")
+				tdd := td.Date.Format("2006-01-02")
 				if tdd != tc.d && !tc.sf {
 					t.Errorf(`unmarshal of APIDate type failed. Expected: %q, got %q"`, tc.d, tdd)
 				}
@@ -731,7 +731,7 @@ func ExampleBreachAPI_Breaches_getAllBreaches() {
 	if len(bl) != 0 {
 		for _, b := range bl {
 			fmt.Printf("Found breach:\n\tName: %s\n\tDomain: %s\n\tBreach date: %s\n\n",
-				b.Name, b.Domain, b.BreachDate.Time().Format("Mon, 2. January 2006"))
+				b.Name, b.Domain, b.BreachDate.Format("Mon, 2. January 2006"))
 		}
 	}
 }
@@ -768,7 +768,7 @@ func ExampleBreachAPI_BreachByName() {
 	if bd != nil {
 		fmt.Println("Details of the 'Adobe' breach:")
 		fmt.Printf("\tDomain: %s\n", bd.Domain)
-		fmt.Printf("\tBreach date: %s\n", bd.BreachDate.Time().Format("2006-01-02"))
+		fmt.Printf("\tBreach date: %s\n", bd.BreachDate.Format("2006-01-02"))
 		fmt.Printf("\tAdded to HIBP: %s\n", bd.AddedDate.String())
 	}
 }
