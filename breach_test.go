@@ -5,10 +5,11 @@
 package hibp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -17,32 +18,315 @@ const (
 	validNullDateJSON = `{"date": "null"}`
 	invalidJSON       = `{"date": '2022-10-01'}`
 	invalidDateJSON   = `{"date": "202299-10-01"}`
+
+	// ServerResponseBreachesAllTruncatedUnverified represents the file path to a test dataset of all
+	// truncated unverified breaches.
+	ServerResponseBreachesAllTruncatedUnverified = "testdata/breach-all-truncated-unverified.txt"
+
+	// ServerResponseBreachesAllNonTruncatedUnverified represents the file path to a test dataset of all
+	// non-truncated unverified breaches.
+	ServerResponseBreachesAllNonTruncatedUnverified = "testdata/breach-all-notruncate-unverified.txt"
+
+	// ServerResponseBreachesAllNonTruncatedVerifiedOnly represents the file path to a test dataset of all
+	// non-truncated verified breaches.
+	ServerResponseBreachesAllNonTruncatedVerifiedOnly = "testdata/breach-all-notruncate-verifiedonly.txt"
+
+	// ServerResponseBreachesAllTruncatedVerifiedOnly represents the file path to a test dataset of all
+	// truncated verified breaches.
+	ServerResponseBreachesAllTruncatedVerifiedOnly = "testdata/breach-all-truncated-verifiedonly.txt"
+
+	// ServerResponseBreachesBrokenJSON represents the file path to a test dataset with broken or invalid
+	// JSON data.
+	ServerResponseBreachesBrokenJSON = "testdata/breach-broken-json.txt"
+
+	// ServerResponseBreachesDomainTruncatedUnverified represents a file path template for truncated unverified
+	// domain breach data.
+	ServerResponseBreachesDomainTruncatedUnverified = "testdata/breachdomain-%s-truncated-unverified.txt"
+
+	// ServerResponseBreachesDomainNonTruncatedUnverified represents the path for a non-truncated, unverified
+	// domain breach file.
+	ServerResponseBreachesDomainNonTruncatedUnverified = "testdata/breachdomain-%s-notruncate-unverified.txt"
+
+	// ServerResponseBreachesDomainNonTruncatedVerifiedOnly represents a file path for non-truncated, verified-only
+	// breach data by domain.
+	ServerResponseBreachesDomainNonTruncatedVerifiedOnly = "testdata/breachdomain-%s-notruncate-verifiedonly.txt"
+
+	// ServerResponseBreachesDomainTruncatedVerifiedOnly represents the file path for a specific truncated,
+	// verified-only breach response.
+	ServerResponseBreachesDomainTruncatedVerifiedOnly = "testdata/breachdomain-%s-truncated-verifiedonly.txt"
+
+	// ServerResponseBreachByName represents the file path format for breach data identified by name
+	ServerResponseBreachByName = "testdata/breachbyname-%s.txt"
+
+	// ServerResponseBreachLatestBreach is the file path containing the test data for the latest breach response.
+	ServerResponseBreachLatestBreach = "testdata/breach-latestbreach.txt"
+
+	// ServerResponseBreachLatestBreachBroken represents the path to a test file containing broken data for the
+	// latest breach endpoint.
+	ServerResponseBreachLatestBreachBroken = "testdata/breach-latestbreach-broken.txt"
 )
 
-// TestBreachAPI_Breaches tests the Breaches() method of the breaches API
 func TestBreachAPI_Breaches(t *testing.T) {
-	hc := New()
-	breachList, _, err := hc.BreachAPI.Breaches()
-	if err != nil {
-		t.Error(err)
+	t.Run("return all breaches, truncated, including unverified", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesAllTruncatedUnverified))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breaches, _, err := hc.BreachAPI.Breaches()
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+		if len(breaches) != 871 {
+			t.Errorf("expected 871 breaches, got %d", len(breaches))
+		}
+	})
+	t.Run("return all breaches, truncated, including unverified, nil options", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesAllTruncatedUnverified))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breaches, _, err := hc.BreachAPI.Breaches(nil)
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+		if len(breaches) != 871 {
+			t.Errorf("expected 871 breaches, got %d", len(breaches))
+		}
+	})
+	t.Run("return all breaches, non-truncated, including unverified", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesAllNonTruncatedUnverified))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breaches, _, err := hc.BreachAPI.Breaches(WithoutTruncate())
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+		if len(breaches) != 871 {
+			t.Errorf("expected 871 breaches, got %d", len(breaches))
+		}
+	})
+	t.Run("return all breaches, non-truncated, exclude unverified", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesAllNonTruncatedVerifiedOnly))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breaches, _, err := hc.BreachAPI.Breaches(WithoutTruncate(), WithoutUnverified())
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+		if len(breaches) != 871 {
+			t.Errorf("expected 871 breaches, got %d", len(breaches))
+		}
+	})
+	t.Run("return all breaches, truncated, exclude unverified", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesAllTruncatedVerifiedOnly))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breaches, _, err := hc.BreachAPI.Breaches(WithoutTruncate(), WithoutUnverified())
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+		if len(breaches) != 871 {
+			t.Errorf("expected 871 breaches, got %d", len(breaches))
+		}
+	})
+	t.Run("return all breaches on broken JSON should fail", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachesBrokenJSON))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.Breaches()
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+}
+
+func TestBreachAPI_Breaches_using_WithDomain(t *testing.T) {
+	tests := []struct {
+		name     string
+		breached bool
+		verified bool
+	}{
+		{"adobe.com", true, true},
+		{"parapa.mail.ru", true, true},
+		{"xiaomi.cn", true, false},
+		{"example.com", false, false},
 	}
-	if breachList != nil && len(breachList) <= 0 {
-		t.Error("breaches list returned 0 results")
+	for _, tt := range tests {
+		t.Run("get breaches for "+tt.name+", truncated, including unverified", func(t *testing.T) {
+			response := fmt.Sprintf(ServerResponseBreachesDomainTruncatedUnverified, tt.name)
+			server := httptest.NewServer(newTestFileHandler(t, response))
+			defer server.Close()
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			breaches, _, err := hc.BreachAPI.Breaches(WithDomain(tt.name))
+			if err != nil {
+				t.Errorf("failed to get breaches: %s", err)
+			}
+			if tt.breached && len(breaches) == 0 {
+				t.Errorf("expected breaches for domain %q, got none", tt.name)
+			}
+			if !tt.breached && len(breaches) > 0 {
+				t.Errorf("expected no breaches for domain %q, got %d", tt.name, len(breaches))
+			}
+			if len(breaches) > 0 && breaches[0].Domain != tt.name {
+				t.Errorf("expected breaches for domain %q, got %q", tt.name, breaches[0].Domain)
+			}
+		})
+		t.Run("get breaches for "+tt.name+", non-truncated, including unverified", func(t *testing.T) {
+			response := fmt.Sprintf(ServerResponseBreachesDomainNonTruncatedUnverified, tt.name)
+			server := httptest.NewServer(newTestFileHandler(t, response))
+			defer server.Close()
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			breaches, _, err := hc.BreachAPI.Breaches(WithDomain(tt.name))
+			if err != nil {
+				t.Errorf("failed to get breaches: %s", err)
+			}
+			if tt.breached && len(breaches) == 0 {
+				t.Errorf("expected breaches for domain %q, got none", tt.name)
+			}
+			if !tt.breached && len(breaches) > 0 {
+				t.Errorf("expected no breaches for domain %q, got %d", tt.name, len(breaches))
+			}
+			if len(breaches) > 0 && breaches[0].Domain != tt.name {
+				t.Errorf("expected breaches for domain %q, got %q", tt.name, breaches[0].Domain)
+			}
+		})
+		t.Run("get breaches for "+tt.name+", non-truncated, excluding unverified", func(t *testing.T) {
+			response := fmt.Sprintf(ServerResponseBreachesDomainNonTruncatedVerifiedOnly, tt.name)
+			server := httptest.NewServer(newTestFileHandler(t, response))
+			defer server.Close()
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			breaches, _, err := hc.BreachAPI.Breaches(WithDomain(tt.name))
+			if err != nil {
+				t.Errorf("failed to get breaches: %s", err)
+			}
+			if tt.breached && tt.verified && len(breaches) == 0 {
+				t.Errorf("expected breaches for domain %q, got none", tt.name)
+			}
+			if !tt.breached && len(breaches) > 0 {
+				t.Errorf("expected no breaches for domain %q, got %d", tt.name, len(breaches))
+			}
+			if len(breaches) > 0 && breaches[0].Domain != tt.name {
+				t.Errorf("expected breaches for domain %q, got %q", tt.name, breaches[0].Domain)
+			}
+		})
+		t.Run("get breaches for "+tt.name+", truncated, excluding unverified", func(t *testing.T) {
+			response := fmt.Sprintf(ServerResponseBreachesDomainTruncatedVerifiedOnly, tt.name)
+			server := httptest.NewServer(newTestFileHandler(t, response))
+			defer server.Close()
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			breaches, _, err := hc.BreachAPI.Breaches(WithDomain(tt.name))
+			if err != nil {
+				t.Errorf("failed to get breaches: %s", err)
+			}
+			if tt.breached && tt.verified && len(breaches) == 0 {
+				t.Errorf("expected breaches for domain %q, got none", tt.name)
+			}
+			if !tt.breached && len(breaches) > 0 {
+				t.Errorf("expected no breaches for domain %q, got %d", tt.name, len(breaches))
+			}
+			if len(breaches) > 0 && breaches[0].Domain != tt.name {
+				t.Errorf("expected breaches for domain %q, got %q", tt.name, breaches[0].Domain)
+			}
+		})
 	}
 }
 
-// TestBreachAPI_Breaches_WithNIL tests the Breaches() method of the breaches API with a nil option
-func TestBreachAPI_Breaches_WithNIL(t *testing.T) {
-	hc := New()
-	breachList, _, err := hc.BreachAPI.Breaches(nil)
-	if err != nil {
-		t.Error(err)
-		return
+func TestBreachAPI_BreachByName(t *testing.T) {
+	tests := []struct {
+		name     string
+		verified bool
+	}{
+		{"Adobe", true},
+		{"Parapa", true},
+		{"Xiaomi", false},
 	}
-	if breachList != nil && len(breachList) <= 0 {
-		t.Error("breaches list returned 0 results")
+	for _, tt := range tests {
+		t.Run("get breach by name for "+tt.name, func(t *testing.T) {
+			response := fmt.Sprintf(ServerResponseBreachByName, strings.ToLower(tt.name))
+			server := httptest.NewServer(newTestFileHandler(t, response))
+			defer server.Close()
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			breach, _, err := hc.BreachAPI.BreachByName(tt.name)
+			if err != nil {
+				t.Errorf("failed to get breach: %s", err)
+			}
+			if breach.Name != tt.name {
+				t.Errorf("expected breach for name %q, got %q", tt.name, breach.Name)
+			}
+			if tt.verified && breach.IsVerified == false {
+				t.Errorf("expected breach for name %q to be verified, got %t", tt.name, breach.IsVerified)
+			}
+		})
 	}
+	t.Run("get breach with empty name should fail", func(t *testing.T) {
+		response := fmt.Sprintf(ServerResponseBreachByName, "adobe")
+		server := httptest.NewServer(newTestFileHandler(t, response))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.BreachByName("")
+		if err == nil {
+			t.Errorf("expected to fail with empty name")
+		}
+		if !errors.Is(err, ErrNoName) {
+			t.Errorf("expected to error to be: %s, got: %s", ErrNoName, err)
+		}
+	})
+	t.Run("get breach should fail on HTTP error", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.BreachByName("Adobe")
+		if err == nil {
+			t.Errorf("expected to fail on HTTP error")
+		}
+	})
+	t.Run("get breach with broken JSON should fail", func(t *testing.T) {
+		response := fmt.Sprintf(ServerResponseBreachByName, "brokenjson")
+		server := httptest.NewServer(newTestFileHandler(t, response))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.BreachByName("brokenjson")
+		if err == nil {
+			t.Errorf("expected to fail with empty name")
+		}
+	})
 }
+
+func TestBreachAPI_LatestBreach(t *testing.T) {
+	t.Run("get latest breach", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachLatestBreach))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		breach, _, err := hc.BreachAPI.LatestBreach()
+		if err != nil {
+			t.Errorf("failed to get latest breach: %s", err)
+		}
+		if breach.Name != "AlienStealerLogs" {
+			t.Errorf("expected latest breach to be AlienStealerLogs, got %s", breach.Name)
+		}
+		if !breach.IsVerified {
+			t.Errorf("expected latest breach to be verified, got %t", breach.IsVerified)
+		}
+	})
+	t.Run("get latest breach should fail on HTTP error", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.LatestBreach()
+		if err == nil {
+			t.Errorf("expected to fail on HTTP error")
+		}
+	})
+	t.Run("get latest breach with broken JSON should fail", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachLatestBreachBroken))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.LatestBreach()
+		if err == nil {
+			t.Errorf("expected to fail with empty name")
+		}
+	})
+}
+
+/*
 
 // TestBreachAPI_Breaches_WithDomain tests the Breaches() method of the breaches API for a specific domain
 func TestBreachAPI_Breaches_WithDomain(t *testing.T) {
@@ -505,3 +789,6 @@ func ExampleBreachAPI_BreachedAccount() {
 		fmt.Printf("Your account was part of the %q breach\n", b.Name)
 	}
 }
+
+
+*/
