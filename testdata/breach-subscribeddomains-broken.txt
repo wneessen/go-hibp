@@ -1,0 +1,1 @@
+[{"DomainName":"domain.tld","PwnCount":6,"PwnCountExcludingSpamLists":5,"PwnCountExcludingSpamListsAtLastSubscriptionRenewal":5,"NextSubscriptionRenewal":2025}]
