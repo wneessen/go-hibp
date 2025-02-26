@@ -27,21 +27,32 @@ const (
 	// Represents the string: test
 	PwHashInsecureNTLM = "0cb6948805f797bf2a82807973b89537"
 
-	// PwHashSecure is the SHA1 checksum of a secure password
-	// Represents the string: F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX
-	PwHashSecure = "90efc095c82eab44e882fda507cfab1a2cd31fc0"
+	// ServerResponseInsecure defines the file path to a test dataset simulating an insecure (breached)
+	// password response.
+	ServerResponseInsecure = "testdata/pwnedpass-insecure.txt"
 
-	// PwHashSecureNTLM is the NTLM hash of a secure password
-	// Represents the string: F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX
-	PwHashSecureNTLM = "997f11041d9aa830842e682d1b4207df"
+	// ServerResponseInvalid represents the file path to a test dataset containing invalid server responses
+	// for testing purposes.
+	ServerResponseInvalid = "testdata/pwnedpass-invalid.txt"
 
-	ServerResponseInsecure        = "testdata/pwnedpass-insecure.txt"
-	ServerResponseInvalid         = "testdata/pwnedpass-invalid.txt"
+	// ServerResponseInsecurePadding defines the file path to a test dataset simulating an insecure password
+	// response with padding.
 	ServerResponseInsecurePadding = "testdata/pwnedpass-insecure-padding.txt"
-	ServerResponseInsecureNTLM    = "testdata/pwnedpass-insecure-ntlm.txt"
-	ServerResponseSecure          = "testdata/pwnedpass-secure.txt"
-	ServerResponseSecurePadding   = "testdata/pwnedpass-secure-padding.txt"
-	ServerResponseSecureNTLM      = "testdata/pwnedpass-secure-ntlm.txt"
+
+	// ServerResponseInsecureNTLM represents the file path to test data containing responses for insecure
+	// NTLM password hashes.
+	ServerResponseInsecureNTLM = "testdata/pwnedpass-insecure-ntlm.txt"
+
+	// ServerResponseSecure defines the file path to a test dataset simulating a secure (non-breached) password
+	// response.
+	ServerResponseSecure = "testdata/pwnedpass-secure.txt"
+
+	// ServerResponseSecurePadding is the path to the file containing the secure padded server response for
+	// test purposes.
+	ServerResponseSecurePadding = "testdata/pwnedpass-secure-padding.txt"
+
+	// ServerResponseSecureNTLM represents the file path to test data for secure NTLM password hash responses.
+	ServerResponseSecureNTLM = "testdata/pwnedpass-secure-ntlm.txt"
 )
 
 // TestPwnedPassAPI_CheckPassword verifies the Pwned Passwords API with the CheckPassword method
@@ -190,6 +201,18 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 		}
 		if len(m) != 987 {
 			t.Errorf("ListHashesPassword was supposed to return 987 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword in SHA-1 mode succeeds on non-leaked passwords and padding enabled", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseSecurePadding))
+		defer server.Close()
+		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
+		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err != nil {
+			t.Fatalf("ListHashesPassword was not supposed to fail, but did: %s", err)
+		}
+		if len(m) != 1005 {
+			t.Errorf("ListHashesPassword was supposed to return 1005 results, but got %d", len(m))
 		}
 	})
 	t.Run("ListHashesPassword with invalid hash mode should fail", func(t *testing.T) {
