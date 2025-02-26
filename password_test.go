@@ -27,32 +27,32 @@ const (
 	// Represents the string: test
 	PwHashInsecureNTLM = "0cb6948805f797bf2a82807973b89537"
 
-	// ServerResponseInsecure defines the file path to a test dataset simulating an insecure (breached)
+	// ServerResponsePwnedPassInsecure defines the file path to a test dataset simulating an insecure (breached)
 	// password response.
-	ServerResponseInsecure = "testdata/pwnedpass-insecure.txt"
+	ServerResponsePwnedPassInsecure = "testdata/pwnedpass-insecure.txt"
 
-	// ServerResponseInvalid represents the file path to a test dataset containing invalid server responses
+	// ServerResponsePwnedPassInvalid represents the file path to a test dataset containing invalid server responses
 	// for testing purposes.
-	ServerResponseInvalid = "testdata/pwnedpass-invalid.txt"
+	ServerResponsePwnedPassInvalid = "testdata/pwnedpass-invalid.txt"
 
-	// ServerResponseInsecurePadding defines the file path to a test dataset simulating an insecure password
+	// ServerResponsePwnedPassInsecurePadding defines the file path to a test dataset simulating an insecure password
 	// response with padding.
-	ServerResponseInsecurePadding = "testdata/pwnedpass-insecure-padding.txt"
+	ServerResponsePwnedPassInsecurePadding = "testdata/pwnedpass-insecure-padding.txt"
 
-	// ServerResponseInsecureNTLM represents the file path to test data containing responses for insecure
+	// ServerResponsePwnedPassInsecureNTLM represents the file path to test data containing responses for insecure
 	// NTLM password hashes.
-	ServerResponseInsecureNTLM = "testdata/pwnedpass-insecure-ntlm.txt"
+	ServerResponsePwnedPassInsecureNTLM = "testdata/pwnedpass-insecure-ntlm.txt"
 
-	// ServerResponseSecure defines the file path to a test dataset simulating a secure (non-breached) password
+	// ServerResponsePwnedPassSecure defines the file path to a test dataset simulating a secure (non-breached) password
 	// response.
-	ServerResponseSecure = "testdata/pwnedpass-secure.txt"
+	ServerResponsePwnedPassSecure = "testdata/pwnedpass-secure.txt"
 
-	// ServerResponseSecurePadding is the path to the file containing the secure padded server response for
+	// ServerResponsePwnedPassSecurePadding is the path to the file containing the secure padded server response for
 	// test purposes.
-	ServerResponseSecurePadding = "testdata/pwnedpass-secure-padding.txt"
+	ServerResponsePwnedPassSecurePadding = "testdata/pwnedpass-secure-padding.txt"
 
-	// ServerResponseSecureNTLM represents the file path to test data for secure NTLM password hash responses.
-	ServerResponseSecureNTLM = "testdata/pwnedpass-secure-ntlm.txt"
+	// ServerResponsePwnedPassSecureNTLM represents the file path to test data for secure NTLM password hash responses.
+	ServerResponsePwnedPassSecureNTLM = "testdata/pwnedpass-secure-ntlm.txt"
 )
 
 // TestPwnedPassAPI_CheckPassword verifies the Pwned Passwords API with the CheckPassword method
@@ -67,15 +67,15 @@ func TestPwnedPassAPI_CheckPassword(t *testing.T) {
 		{
 			"weak password 'test' is expected to be leaked",
 			PwStringInsecure,
-			ServerResponseInsecure,
-			ServerResponseInsecureNTLM,
+			ServerResponsePwnedPassInsecure,
+			ServerResponsePwnedPassInsecureNTLM,
 			true,
 		},
 		{
 			"strong, unknown password is expected to be not leaked",
 			PwStringSecure,
-			ServerResponseSecure,
-			ServerResponseSecureNTLM,
+			ServerResponsePwnedPassSecure,
+			ServerResponsePwnedPassSecureNTLM,
 			false,
 		},
 	}
@@ -168,7 +168,7 @@ func TestPwnedPassAPI_CheckNTLM(t *testing.T) {
 
 func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked password", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
@@ -180,7 +180,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesPassword in NTLM mode succeeds on leaked password", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
 		defer server.Close()
 		hc := New(WithPwnedNTLMHash(), WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
@@ -192,7 +192,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked passwords and padding enabled", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecurePadding))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecurePadding))
 		defer server.Close()
 		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
@@ -204,7 +204,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesPassword in SHA-1 mode succeeds on non-leaked passwords and padding enabled", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseSecurePadding))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassSecurePadding))
 		defer server.Close()
 		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
 		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
@@ -230,7 +230,7 @@ func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
 
 func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
 	t.Run("ListHashesSHA1 fails with too short hash", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("1234567890abcdef")
@@ -242,7 +242,7 @@ func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesSHA1 fails with invalid hash", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesSHA1(PwHashInsecure[:39] + "h")
@@ -257,7 +257,7 @@ func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
 
 func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
 	t.Run("ListHashesNTLM fails with too short hash", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("1234567890abcdef")
@@ -269,7 +269,7 @@ func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesNTLM fails with invalid hash", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesNTLM(PwHashInsecure[:31] + "h")
@@ -284,7 +284,7 @@ func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
 
 func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 	t.Run("ListHashesPrefix fails with too short prefix", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecureNTLM))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("123")
@@ -296,7 +296,7 @@ func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesPrefix with unsupported hash mode should fallback to default", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInsecure))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		hc.PwnedPassAPIOpts.HashMode = 99
@@ -318,7 +318,7 @@ func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 		}
 	})
 	t.Run("ListHashesPrefix skips over invalid result lines", func(t *testing.T) {
-		server := httptest.NewServer(newTestFileHandler(t, ServerResponseInvalid))
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInvalid))
 		defer server.Close()
 		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
 		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("a94a8")
