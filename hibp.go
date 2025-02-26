@@ -196,7 +196,7 @@ func WithLogger(w io.Writer) Option {
 	}
 }
 
-// HTTPReq performs an HTTP request to the corresponding API
+// HTTPReq prepares a HTTP request to the corresponding API
 func (c *Client) HTTPReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
 	if err != nil {

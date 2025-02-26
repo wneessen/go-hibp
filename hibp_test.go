@@ -220,6 +220,13 @@ func newTestFileHandler(t *testing.T, filename string) http.Handler {
 	return newTestStringHandler(t, buffer.String())
 }
 
+func newTestFailureHandler(t *testing.T, code int) http.Handler {
+	t.Helper()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(code)
+	})
+}
+
 // newTestJSONHandler creates an HTTP handler for testing, responding with the specified JSON data string.
 func newTestJSONHandler(t *testing.T, data interface{}) http.Handler {
 	t.Helper()
