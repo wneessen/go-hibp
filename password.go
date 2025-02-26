@@ -226,7 +226,7 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 		})
 	}
 
-	if err := so.Err(); err != nil {
+	if err = so.Err(); err != nil {
 		return nil, hr, err
 	}
 
