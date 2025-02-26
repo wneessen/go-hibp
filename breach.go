@@ -126,7 +126,7 @@ type APIDate time.Time
 type RenewalTime time.Time
 
 // Breaches returns a list of all breaches in the HIBP system
-func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
+func (b *BreachAPI) Breaches(options ...BreachOption) ([]Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
 	au := fmt.Sprintf("%s/breaches", BaseURL)
 
@@ -135,7 +135,7 @@ func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 		return nil, hr, err
 	}
 
-	var bl []*Breach
+	var bl []Breach
 	if err = json.Unmarshal(hb, &bl); err != nil {
 		return nil, hr, err
 	}
@@ -144,44 +144,44 @@ func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 }
 
 // BreachByName returns a single breached site based on its name
-func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (*Breach, *http.Response, error) {
+func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
+	var bd Breach
 
 	if n == "" {
-		return nil, nil, ErrNoName
+		return bd, nil, ErrNoName
 	}
 
 	au := fmt.Sprintf("%s/breach/%s", BaseURL, n)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
-	var bd *Breach
 	if err = json.Unmarshal(hb, &bd); err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
 	return bd, hr, nil
 }
 
 // LatestBreach returns the single most recent breach
-func (b *BreachAPI) LatestBreach() (*Breach, *http.Response, error) {
+func (b *BreachAPI) LatestBreach() (Breach, *http.Response, error) {
+	var bd Breach
 	au := fmt.Sprintf("%s/latestbreach", BaseURL)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
-	var bd *Breach
 	if err = json.Unmarshal(hb, &bd); err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
 	return bd, hr, nil
 }
 
-// DataClasses are attribute of a record compromised in a breach. This method returns a list of strings
+// DataClasses are attributes of a record compromised in a breach. This method returns a list of strings
 // with all registered data classes known to HIBP
 func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 	au := fmt.Sprintf("%s/dataclasses", BaseURL)
