@@ -68,6 +68,9 @@ var (
 
 	// ErrHTTPRequestMethodUnsupported indicates that the HTTP request method used is not supported.
 	ErrHTTPRequestMethodUnsupported = errors.New("HTTP request method not supported")
+
+	// ErrMethodRequiresAPIKey indicates that the invoked method cannot proceed without providing a valid API key.
+	ErrMethodRequiresAPIKey = errors.New("this method requires an API key")
 )
 
 // HTTPClient is an interface representing an HTTP client capable of executing HTTP requests and
@@ -291,4 +294,13 @@ func httpClient(to time.Duration) *http.Client {
 	}
 
 	return hc
+}
+
+// requiresAPIKey ensures that the client has a valid API key set. It returns ErrMethodRequiresAPIKey if the
+// key is missing.
+func requiresAPIKey(c *Client) error {
+	if c.ak == "" {
+		return ErrMethodRequiresAPIKey
+	}
+	return nil
 }
