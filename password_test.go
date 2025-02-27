@@ -7,6 +7,8 @@ package hibp
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -25,403 +27,305 @@ const (
 	// Represents the string: test
 	PwHashInsecureNTLM = "0cb6948805f797bf2a82807973b89537"
 
-	// PwHashSecure is the SHA1 checksum of a secure password
-	// Represents the string: F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX
-	PwHashSecure = "90efc095c82eab44e882fda507cfab1a2cd31fc0"
+	// ServerResponsePwnedPassInsecure defines the file path to a test dataset simulating an insecure (breached)
+	// password response.
+	ServerResponsePwnedPassInsecure = "testdata/pwnedpass-insecure.txt"
 
-	// PwHashSecureNTLM is the NTLM hash of a secure password
-	// Represents the string: F/0Ws#.%{Z/NVax=OU8Ajf1qTRLNS12p/?s/adX
-	PwHashSecureNTLM = "997f11041d9aa830842e682d1b4207df"
+	// ServerResponsePwnedPassInvalid represents the file path to a test dataset containing invalid server responses
+	// for testing purposes.
+	ServerResponsePwnedPassInvalid = "testdata/pwnedpass-invalid.txt"
+
+	// ServerResponsePwnedPassInsecurePadding defines the file path to a test dataset simulating an insecure password
+	// response with padding.
+	ServerResponsePwnedPassInsecurePadding = "testdata/pwnedpass-insecure-padding.txt"
+
+	// ServerResponsePwnedPassInsecureNTLM represents the file path to test data containing responses for insecure
+	// NTLM password hashes.
+	ServerResponsePwnedPassInsecureNTLM = "testdata/pwnedpass-insecure-ntlm.txt"
+
+	// ServerResponsePwnedPassSecure defines the file path to a test dataset simulating a secure (non-breached) password
+	// response.
+	ServerResponsePwnedPassSecure = "testdata/pwnedpass-secure.txt"
+
+	// ServerResponsePwnedPassSecurePadding is the path to the file containing the secure padded server response for
+	// test purposes.
+	ServerResponsePwnedPassSecurePadding = "testdata/pwnedpass-secure-padding.txt"
+
+	// ServerResponsePwnedPassSecureNTLM represents the file path to test data for secure NTLM password hash responses.
+	ServerResponsePwnedPassSecureNTLM = "testdata/pwnedpass-secure-ntlm.txt"
 )
 
 // TestPwnedPassAPI_CheckPassword verifies the Pwned Passwords API with the CheckPassword method
 func TestPwnedPassAPI_CheckPassword(t *testing.T) {
-	testTable := []struct {
-		testName string
+	tests := []struct {
+		name     string
 		pwString string
+		respSHA1 string
+		respNTLM string
 		isLeaked bool
 	}{
-		{"weak password 'test' is expected to be leaked", PwStringInsecure, true},
+		{
+			"weak password 'test' is expected to be leaked",
+			PwStringInsecure,
+			ServerResponsePwnedPassInsecure,
+			ServerResponsePwnedPassInsecureNTLM,
+			true,
+		},
 		{
 			"strong, unknown password is expected to be not leaked",
-			PwStringSecure, false,
+			PwStringSecure,
+			ServerResponsePwnedPassSecure,
+			ServerResponsePwnedPassSecureNTLM,
+			false,
 		},
 	}
-	hc := New()
-	for _, tc := range testTable {
-		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassAPI.CheckPassword(tc.pwString)
-			if err != nil {
-				t.Error(err)
-			}
-			if m == nil && tc.isLeaked {
-				t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
-			}
-			if m != nil && m.Count > 0 && !tc.isLeaked {
-				t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
-					m.Count)
-			}
-		})
-	}
+	t.Run("check password with SHA-1 hashes", func(t *testing.T) {
+		for _, tc := range tests {
+			server := httptest.NewServer(newTestFileHandler(t, tc.respSHA1))
+			hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+			t.Run(tc.name, func(t *testing.T) {
+				m, _, err := hc.PwnedPassAPI.CheckPassword(tc.pwString)
+				if err != nil {
+					t.Error(err)
+				}
+				if m == nil && tc.isLeaked {
+					t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
+				}
+				if m != nil && m.Count > 0 && !tc.isLeaked {
+					t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
+						m.Count)
+				}
+			})
+			server.Close()
+		}
+	})
+	t.Run("check password with NTLM hashes", func(t *testing.T) {
+		for _, tc := range tests {
+			server := httptest.NewServer(newTestFileHandler(t, tc.respNTLM))
+			hc := New(WithPwnedNTLMHash(), WithHTTPClient(newTestClient(t, server.URL)))
+			t.Run(tc.name, func(t *testing.T) {
+				m, _, err := hc.PwnedPassAPI.CheckPassword(tc.pwString)
+				if err != nil {
+					t.Error(err)
+				}
+				if m == nil && tc.isLeaked {
+					t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
+				}
+				if m != nil && m.Count > 0 && !tc.isLeaked {
+					t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
+						m.Count)
+				}
+			})
+			server.Close()
+		}
+	})
+	t.Run("check password fails with wrong hash mode", func(t *testing.T) {
+		hc := New(WithHTTPClient(newTestClient(t, "")))
+		hc.PwnedPassAPIOpts.HashMode = 99
+		_, _, err := hc.PwnedPassAPI.CheckPassword(PwStringInsecure)
+		if err == nil {
+			t.Error("CheckPassword with unsupported HashMode was supposed to fail, but didn't")
+		}
+		if !errors.Is(err, ErrUnsupportedHashMode) {
+			t.Errorf("CheckPassword wrong error, expected: %s, got: %s", ErrUnsupportedHashMode, err)
+		}
+	})
 }
 
-// TestPwnedPassAPI_CheckPassword_NTLM verifies the Pwned Passwords API with the CheckPassword method
-// with NTLM hashes enabled
-func TestPwnedPassAPI_CheckPassword_NTLM(t *testing.T) {
-	testTable := []struct {
-		testName string
-		pwString string
-		isLeaked bool
-	}{
-		{"weak password 'test' is expected to be leaked", PwStringInsecure, true},
-		{
-			"strong, unknown password is expected to be not leaked",
-			PwStringSecure, false,
-		},
-	}
-	hc := New(WithPwnedNTLMHash())
-	for _, tc := range testTable {
-		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassAPI.CheckPassword(tc.pwString)
-			if err != nil {
-				t.Error(err)
-			}
-			if m == nil && tc.isLeaked {
-				t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
-			}
-			if m != nil && m.Count > 0 && !tc.isLeaked {
-				t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
-					m.Count)
-			}
-		})
-	}
-}
-
-// TestPwnedPassAPI_CheckPassword_failed verifies the Pwned Passwords API with the CheckPassword method
-// with intentionally failing requests
-func TestPwnedPassAPI_CheckPassword_failed(t *testing.T) {
-	hc := New()
-	hc.PwnedPassAPIOpts.HashMode = 99
-	_, _, err := hc.PwnedPassAPI.CheckPassword(PwStringInsecure)
-	if err == nil {
-		t.Error("CheckPassword with unsupported HashMode was supposed to fail, but didn't")
-	}
-	if !errors.Is(err, ErrUnsupportedHashMode) {
-		t.Errorf("CheckPassword wrong error, expected: %s, got: %s", ErrUnsupportedHashMode, err)
-	}
-}
-
-// TestPwnedPassAPI_CheckSHA1 verifies the Pwned Passwords API with the CheckSHA1 method
 func TestPwnedPassAPI_CheckSHA1(t *testing.T) {
-	testTable := []struct {
-		testName   string
-		pwHash     string
-		isLeaked   bool
-		shouldFail bool
-	}{
-		{
-			"weak password 'test' is expected to be leaked",
-			PwHashInsecure, true, false,
-		},
-		{
-			"strong, unknown password is expected to be not leaked",
-			PwHashSecure, false, false,
-		},
-		{
-			"empty string should fail",
-			"", false, true,
-		},
-	}
-	hc := New()
-	for _, tc := range testTable {
-		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassAPI.CheckSHA1(tc.pwHash)
-			if err != nil && !tc.shouldFail {
-				t.Error(err)
-				return
-			}
-			if m == nil && tc.isLeaked {
-				t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
-			}
-			if m != nil && m.Count > 0 && !tc.isLeaked {
-				t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
-					m.Count)
-			}
-			if m != nil && m.Hash != tc.pwHash {
-				t.Errorf("password hashes don't match, expected: %s, got %s", tc.pwHash, m.Hash)
-			}
-		})
-	}
+	t.Run("CheckSHA1 with invalid length hash should fail", func(t *testing.T) {
+		hc := New()
+		_, _, err := hc.PwnedPassAPI.CheckSHA1("123456abcdef")
+		if err == nil {
+			t.Errorf("CheckSHA1 with invalid length hash should fail")
+		}
+	})
+	t.Run("CheckSHA1 with invalid URL should fail", func(t *testing.T) {
+		hc := New(WithHTTPClient(newTestClient(t, "")))
+		_, _, err := hc.PwnedPassAPI.CheckSHA1(PwHashInsecure)
+		if err == nil {
+			t.Errorf("CheckSHA1 with invalid URL should fail")
+		}
+	})
 }
 
-// TestPwnedPassAPI_CheckNTLM verifies the Pwned Passwords API with the CheckNTLM method
 func TestPwnedPassAPI_CheckNTLM(t *testing.T) {
-	testTable := []struct {
-		testName   string
-		pwHash     string
-		isLeaked   bool
-		shouldFail bool
-	}{
-		{
-			"weak password 'test' is expected to be leaked",
-			PwHashInsecureNTLM, true, false,
-		},
-		{
-			"strong, unknown password is expected to be not leaked",
-			PwHashSecureNTLM, false, false,
-		},
-		{
-			"empty string should fail",
-			"", false, true,
-		},
-	}
-	hc := New()
-	for _, tc := range testTable {
-		t.Run(tc.testName, func(t *testing.T) {
-			m, _, err := hc.PwnedPassAPI.CheckNTLM(tc.pwHash)
-			if err != nil && !tc.shouldFail {
-				t.Error(err)
-				return
-			}
-			if m == nil && tc.isLeaked {
-				t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
-			}
-			if m != nil && m.Count > 0 && !tc.isLeaked {
-				t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
-					m.Count)
-			}
-			if m != nil && m.Hash != tc.pwHash {
-				t.Errorf("password hashes don't match, expected: %s, got %s", tc.pwHash, m.Hash)
-			}
-		})
-	}
-}
-
-// TestPwnedPassAPI_ListHashesPrefix tests the ListHashesPrefix method (especially for failures that are not
-// tested by the other tests already)
-func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
-	hc := New()
-
-	// Should return at least 1 restults
-	l, _, err := hc.PwnedPassAPI.ListHashesPrefix("a94a8")
-	if err != nil {
-		t.Errorf("ListHashesPrefix was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesPrefix was supposed to return a list longer than 0")
-	}
-
-	// Prefix has wrong size
-	_, _, err = hc.PwnedPassAPI.ListHashesPrefix("ZZZZZZZZZZZZZZ")
-	if err == nil {
-		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
-	}
-
-	// Non allowed characters
-	_, _, err = hc.PwnedPassAPI.ListHashesPrefix(string([]byte{0, 0, 0, 0, 0}))
-	if err == nil {
-		t.Errorf("ListHashesPrefix was supposed to fail, but didn't")
-	}
-
-	// Should fall back to SHA-1
-	hc.PwnedPassAPIOpts.HashMode = 99
-	l, _, err = hc.PwnedPassAPI.ListHashesPrefix("a94a8")
-	if err != nil {
-		t.Errorf("ListHashesPrefix was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesPrefix was supposed to return a list longer than 0")
-	}
-}
-
-// TestPwnedPassAPI_ListHashesPrefix_Errors tests the ListHashesPrefix method's errors
-func TestPwnedPassAPI_ListHashesPrefix_Errors(t *testing.T) {
-	hc := New()
-
-	// Empty prefix
-	t.Run("empty prefix", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("")
+	t.Run("CheckNTLM with invalid length hash should fail", func(t *testing.T) {
+		hc := New()
+		_, _, err := hc.PwnedPassAPI.CheckNTLM("123456abcdef")
 		if err == nil {
-			t.Errorf("ListHashesPrefix with empty prefix should fail but didn't")
-			return
-		}
-		if !errors.Is(err, ErrPrefixLengthMismatch) {
-			t.Errorf("ListHashesPrefix with empty prefix should return ErrPrefixLengthMismatch error but didn't")
-			return
+			t.Errorf("CheckNTLM with invalid length hash should fail")
 		}
 	})
-
-	// Too long prefix
-	t.Run("too long prefix", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("abcdefg12345")
+	t.Run("CheckNTLM with invalid URL should fail", func(t *testing.T) {
+		hc := New(WithHTTPClient(newTestClient(t, "")))
+		_, _, err := hc.PwnedPassAPI.CheckNTLM(PwHashInsecureNTLM)
 		if err == nil {
-			t.Errorf("ListHashesPrefix with too long prefix should fail but didn't")
-			return
-		}
-		if !errors.Is(err, ErrPrefixLengthMismatch) {
-			t.Errorf("ListHashesPrefix with too long prefix should return ErrPrefixLengthMismatch error but didn't")
+			t.Errorf("CheckNTLM with invalid URL should fail")
 		}
 	})
 }
 
-// TestPwnedPassAPI_ListHashesSHA1_Errors tests the ListHashesSHA1 method's errors
-func TestPwnedPassAPI_ListHashesSHA1_Errors(t *testing.T) {
-	hc := New()
-
-	// Empty hash
-	t.Run("empty hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("")
+func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
+	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked password", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err != nil {
+			t.Fatalf("ListHashesPassword was not supposed to fail, but did: %s", err)
+		}
+		if len(m) != 987 {
+			t.Errorf("ListHashesPassword was supposed to return 987 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword in NTLM mode succeeds on leaked password", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
+		defer server.Close()
+		hc := New(WithPwnedNTLMHash(), WithHTTPClient(newTestClient(t, server.URL)))
+		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err != nil {
+			t.Fatalf("ListHashesPassword was not supposed to fail, but did: %s", err)
+		}
+		if len(m) != 978 {
+			t.Errorf("ListHashesPassword was supposed to return 978 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword in SHA-1 mode succeeds on leaked passwords and padding enabled", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecurePadding))
+		defer server.Close()
+		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
+		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err != nil {
+			t.Fatalf("ListHashesPassword was not supposed to fail, but did: %s", err)
+		}
+		if len(m) != 987 {
+			t.Errorf("ListHashesPassword was supposed to return 987 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword in SHA-1 mode succeeds on non-leaked passwords and padding enabled", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassSecurePadding))
+		defer server.Close()
+		hc := New(WithPwnedPadding(), WithHTTPClient(newTestClient(t, server.URL)))
+		m, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
+		if err != nil {
+			t.Fatalf("ListHashesPassword was not supposed to fail, but did: %s", err)
+		}
+		if len(m) != 1005 {
+			t.Errorf("ListHashesPassword was supposed to return 1005 results, but got %d", len(m))
+		}
+	})
+	t.Run("ListHashesPassword with invalid hash mode should fail", func(t *testing.T) {
+		hc := New()
+		hc.PwnedPassAPIOpts.HashMode = 99
+		_, _, err := hc.PwnedPassAPI.ListHashesPassword("test")
 		if err == nil {
-			t.Errorf("ListHashesSHA1 with empty hash should fail but didn't")
+			t.Errorf("ListHashesPassword with unsupported hash mode was supposed to fail")
+		}
+		if !errors.Is(err, ErrUnsupportedHashMode) {
+			t.Errorf("ListHashesPassword wrong error, expected: %s, got: %s", ErrUnsupportedHashMode, err)
+		}
+	})
+}
+
+func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
+	t.Run("ListHashesSHA1 fails with too short hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("1234567890abcdef")
+		if err == nil {
+			t.Errorf("ListHashesSHA1 with too short hash should fail")
 		}
 		if !errors.Is(err, ErrSHA1LengthMismatch) {
-			t.Errorf("ListHashesSHA1 with empty hash should return ErrSHA1LengthMismatch error but didn't")
+			t.Errorf("ListHashesSHA1 wrong error, expected: %s, got: %s", ErrSHA1LengthMismatch, err)
 		}
 	})
-
-	// Too long hash
-	t.Run("too long hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("FF36DC7D3284A39991ADA90CAF20D1E3C0DADEFAB")
+	t.Run("ListHashesSHA1 fails with invalid hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesSHA1(PwHashInsecure[:39] + "h")
 		if err == nil {
-			t.Errorf("ListHashesSHA1 with too long hash should fail but didn't")
-		}
-		if !errors.Is(err, ErrSHA1LengthMismatch) {
-			t.Errorf("ListHashesSHA1 with too long hash should return ErrSHA1LengthMismatch error but didn't")
-		}
-	})
-
-	// Invalid hash
-	t.Run("invalid hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesSHA1("FF36DC7D3284A39991ADA90CAF20D1E3C0DADEFZ")
-		if err == nil {
-			t.Errorf("ListHashesSHA1 with invalid hash should fail but didn't")
+			t.Errorf("ListHashesSHA1 with invalid hash should fail")
 		}
 		if !errors.Is(err, ErrSHA1Invalid) {
-			t.Errorf("ListHashesSHA1 with invalid hash should return ErrSHA1Invalid error but didn't")
+			t.Errorf("ListHashesSHA1 wrong error, expected: %s, got: %s", ErrSHA1Invalid, err)
 		}
 	})
 }
 
-// TestPwnedPassAPI_ListHashesNTLM_Errors tests the ListHashesNTLM method's errors
-func TestPwnedPassAPI_ListHashesNTLM_Errors(t *testing.T) {
-	hc := New()
-
-	// Empty hash
-	t.Run("empty hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("")
+func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
+	t.Run("ListHashesNTLM fails with too short hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("1234567890abcdef")
 		if err == nil {
-			t.Errorf("ListHashesNTLM with empty hash should fail but didn't")
+			t.Errorf("ListHashesNTLM with too short hash should fail")
 		}
 		if !errors.Is(err, ErrNTLMLengthMismatch) {
-			t.Errorf("ListHashesNTLM with empty hash should return ErrNTLMLengthMismatch error but didn't")
+			t.Errorf("ListHashesNTLM wrong error, expected: %s, got: %s", ErrNTLMLengthMismatch, err)
 		}
 	})
-
-	// Too long hash
-	t.Run("too long hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("FF36DC7D3284A39991ADA90CAF20D1E3C0DADEFAB")
+	t.Run("ListHashesNTLM fails with invalid hash", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesNTLM(PwHashInsecure[:31] + "h")
 		if err == nil {
-			t.Errorf("ListHashesNTLM with too long hash should fail but didn't")
-		}
-		if !errors.Is(err, ErrNTLMLengthMismatch) {
-			t.Errorf("ListHashesNTLM with too long hash should return ErrNTLMLengthMismatch error but didn't")
-		}
-	})
-
-	// Invalid hash
-	t.Run("invalid hash", func(t *testing.T) {
-		_, _, err := hc.PwnedPassAPI.ListHashesNTLM("3284A39991ADA90CAF20D1E3C0DADEFZ")
-		if err == nil {
-			t.Errorf("ListHashesNTLM with invalid hash should fail but didn't")
+			t.Errorf("ListHashesNTLM with invalid hash should fail")
 		}
 		if !errors.Is(err, ErrNTLMInvalid) {
-			t.Errorf("ListHashesNTLM with invalid hash should return ErrSHA1Invalid error but didn't")
+			t.Errorf("ListHashesNTLM wrong error, expected: %s, got: %s", ErrNTLMInvalid, err)
 		}
 	})
 }
 
-// TestPwnedPassApi_ListHashesSHA1 tests the PwnedPassAPI.ListHashesSHA1 metethod
-func TestPwnedPassAPI_ListHashesSHA1(t *testing.T) {
-	hc := New()
-
-	// List length should be >0
-	l, _, err := hc.PwnedPassAPI.ListHashesSHA1(PwHashInsecure)
-	if err != nil {
-		t.Errorf("ListHashesSHA1 was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesSHA1 was supposed to return a list longer than 0")
-	}
-
-	// Hash has wrong size
-	_, _, err = hc.PwnedPassAPI.ListHashesSHA1(PwStringInsecure)
-	if err == nil {
-		t.Errorf("ListHashesSHA1 was supposed to fail, but didn't")
-	}
-}
-
-// TestPwnedPassApi_ListHashesNTLM tests the PwnedPassAPI.ListHashesNTLM metethod
-func TestPwnedPassAPI_ListHashesNTLM(t *testing.T) {
-	hc := New(WithPwnedNTLMHash())
-
-	// List length should be >0
-	l, _, err := hc.PwnedPassAPI.ListHashesNTLM(PwHashInsecureNTLM)
-	if err != nil {
-		t.Errorf("ListHashesNTLM was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesNTLM was supposed to return a list longer than 0")
-	}
-
-	// Hash has wrong size
-	_, _, err = hc.PwnedPassAPI.ListHashesNTLM(PwStringInsecure)
-	if err == nil {
-		t.Errorf("ListHashesNTLM was supposed to fail, but didn't")
-	}
-}
-
-// TestPwnedPassAPI_ListHashesPassword tests the PwnedPassAPI.ListHashesPassword metethod
-func TestPwnedPassAPI_ListHashesPassword(t *testing.T) {
-	hc := New()
-
-	// List length should be >0
-	l, _, err := hc.PwnedPassAPI.ListHashesPassword(PwStringInsecure)
-	if err != nil {
-		t.Errorf("ListHashesPassword was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesPassword was supposed to return a list longer than 0")
-	}
-}
-
-// TestPwnedPassAPI_ListHashesPassword_failed tests the PwnedPassAPI.ListHashesPassword metethod
-// with a unsupported HashMode
-func TestPwnedPassAPI_ListHashesPassword_failed(t *testing.T) {
-	hc := New()
-	hc.PwnedPassAPIOpts.HashMode = 99
-
-	_, _, err := hc.PwnedPassAPI.ListHashesPassword(PwStringInsecure)
-	if err == nil {
-		t.Error("ListHashesPassword with unspported HashMode was supposed to fail, but didn't")
-	}
-	if !errors.Is(err, ErrUnsupportedHashMode) {
-		t.Errorf("ListHashesPassword error does not match, expected: %s, got: %s", ErrUnsupportedHashMode, err)
-	}
-}
-
-// TestPwnedPassAPI_ListHashesPasswordNTLM tests the PwnedPassAPI.ListHashesPassword metethod
-// with NTLM HashMode
-func TestPwnedPassAPI_ListHashesPasswordNTLM(t *testing.T) {
-	hc := New(WithPwnedNTLMHash())
-
-	// List length should be >0
-	l, _, err := hc.PwnedPassAPI.ListHashesPassword(PwStringInsecure)
-	if err != nil {
-		t.Errorf("ListHashesPassword was not supposed to fail, but did: %s", err)
-	}
-	if len(l) <= 0 {
-		t.Errorf("ListHashesPassword was supposed to return a list longer than 0")
-	}
+func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
+	t.Run("ListHashesPrefix fails with too short prefix", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecureNTLM))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("123")
+		if err == nil {
+			t.Errorf("ListHashesPrefix with too short hash should fail")
+		}
+		if !errors.Is(err, ErrPrefixLengthMismatch) {
+			t.Errorf("ListHashesPrefix wrong error, expected: %s, got: %s", ErrPrefixLengthMismatch, err)
+		}
+	})
+	t.Run("ListHashesPrefix with unsupported hash mode should fallback to default", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInsecure))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc.PwnedPassAPIOpts.HashMode = 99
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("a94a8")
+		if err != nil {
+			t.Errorf("ListHashesPrefix with unsupported hash mode failed: %s", err)
+		}
+	})
+	t.Run("ListHashesPrefix fails on HTTP request", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("a94a8")
+		if err == nil {
+			t.Error("ListHashesPrefix was supposed to fail on HTTP request")
+		}
+		if !errors.Is(err, ErrNonPositiveResponse) {
+			t.Errorf("ListHashesPrefix wrong error, expected: %s, got: %s", ErrNonPositiveResponse, err)
+		}
+	})
+	t.Run("ListHashesPrefix skips over invalid result lines", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePwnedPassInvalid))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PwnedPassAPI.ListHashesPrefix("a94a8")
+		if err != nil {
+			t.Errorf("ListHashesPrefix failed: %s", err)
+		}
+	})
 }
 
 // ExamplePwnedPassAPI_CheckPassword is a code example to show how to check a given password
@@ -433,9 +337,8 @@ func ExamplePwnedPassAPI_CheckPassword() {
 		panic(err)
 	}
 	if m != nil && m.Count != 0 {
-		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
-			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 222947 times in the pwned passwords DB
+		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
 }
 
@@ -448,9 +351,8 @@ func ExamplePwnedPassAPI_CheckPassword_withPadding() {
 		panic(err)
 	}
 	if m != nil && m.Count != 0 {
-		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
-			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 222947 times in the pwned passwords DB
+		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
 }
 
@@ -464,9 +366,8 @@ func ExamplePwnedPassAPI_checkSHA1() {
 		panic(err)
 	}
 	if m != nil && m.Count != 0 {
-		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
-			m.Hash, m.Count)
-		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found 222947 times in the pwned passwords DB
+		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
+		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
 }
 
@@ -480,8 +381,7 @@ func ExamplePwnedPassAPI_checkNTLM() {
 		panic(err)
 	}
 	if m != nil && m.Count != 0 {
-		fmt.Printf("Your password with the hash %q was found %d times in the pwned passwords DB\n",
-			m.Hash, m.Count)
-		// Output: Your password with the hash "0cb6948805f797bf2a82807973b89537" was found 222947 times in the pwned passwords DB
+		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
+		// Output: Your password with the hash "0cb6948805f797bf2a82807973b89537" was found in the pwned passwords DB
 	}
 }

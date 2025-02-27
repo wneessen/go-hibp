@@ -6,7 +6,6 @@
 package hibp
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -16,22 +15,24 @@ import (
 	"time"
 )
 
-// Version represents the version of this package
-const Version = "1.0.5"
+const (
+	// Version represents the version of this package
+	Version = "1.0.5"
 
-// BaseURL is the base URL for the majority of API endpoints
-const BaseURL = "https://haveibeenpwned.com/api/v3"
+	// BaseURL is the base URL for the majority of API endpoints
+	BaseURL = "https://haveibeenpwned.com/api/v3"
 
-// PasswdBaseURL is the base URL for the pwned passwords API endpoints
-const PasswdBaseURL = "https://api.pwnedpasswords.com"
+	// PasswdBaseURL is the base URL for the pwned passwords API endpoints
+	PasswdBaseURL = "https://api.pwnedpasswords.com"
 
-// DefaultUserAgent defines the default UA string for the HTTP client
-// Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
-// not allowing multiple slashes
-const DefaultUserAgent = `go-hibp/` + Version + ` (+https://github.com/wneessen/go-hibp)`
+	// DefaultUserAgent defines the default UA string for the HTTP client.
+	// Currently the URL in the UA string is comment out, as there is a bug in the HIBP API
+	// not allowing multiple slashes
+	DefaultUserAgent = `go-hibp/` + Version + ` (+https://github.com/wneessen/go-hibp)`
 
-// DefaultTimeout is the default timeout value for the HTTP client
-const DefaultTimeout = time.Second * 5
+	// DefaultTimeout is the default timeout value for the HTTP client
+	DefaultTimeout = time.Second * 5
+)
 
 // List of common errors
 var (
@@ -64,11 +65,20 @@ var (
 
 	// ErrUnsupportedHashMode should be used if a given hash mode is not supported
 	ErrUnsupportedHashMode = errors.New("hash mode not supported")
+
+	// ErrHTTPRequestMethodUnsupported indicates that the HTTP request method used is not supported.
+	ErrHTTPRequestMethodUnsupported = errors.New("HTTP request method not supported")
 )
+
+// HTTPClient is an interface representing an HTTP client capable of executing HTTP requests and
+// returning responses.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 
 // Client is the HIBP client object
 type Client struct {
-	hc *http.Client  // HTTP client to perform the API requests
+	hc HTTPClient    // HTTP client to perform the API requests
 	to time.Duration // HTTP client timeout
 	ak string        // HIBP API key
 	ua string        // User agent string for the HTTP client
@@ -177,7 +187,7 @@ func WithPwnedNTLMHash() Option {
 }
 
 // WithHTTPClient sets a custom http client to the HIBP client object
-func WithHTTPClient(hc *http.Client) Option {
+func WithHTTPClient(hc HTTPClient) Option {
 	return func(c *Client) {
 		c.hc = hc
 	}
@@ -190,34 +200,25 @@ func WithLogger(w io.Writer) Option {
 	}
 }
 
-// HTTPReq performs an HTTP request to the corresponding API
+// HTTPReq prepares a HTTP request to the corresponding API
 func (c *Client) HTTPReq(m, p string, q map[string]string) (*http.Request, error) {
 	u, err := url.Parse(p)
 	if err != nil {
 		return nil, err
 	}
 
-	if m == http.MethodGet {
-		uq := u.Query()
-		for k, v := range q {
-			uq.Add(k, v)
-		}
-		u.RawQuery = uq.Encode()
+	if m != http.MethodGet {
+		return nil, ErrHTTPRequestMethodUnsupported
 	}
+	uq := u.Query()
+	for k, v := range q {
+		uq.Add(k, v)
+	}
+	u.RawQuery = uq.Encode()
 
 	hr, err := http.NewRequest(m, u.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if m == http.MethodPost {
-		pd := url.Values{}
-		for k, v := range q {
-			pd.Add(k, v)
-		}
-
-		rb := io.NopCloser(bytes.NewBufferString(pd.Encode()))
-		hr.Body = rb
 	}
 
 	hr.Header.Set("Accept", "application/json")
@@ -257,9 +258,11 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 		if err != nil {
 			return nil, hr, err
 		}
-		delayTime += 1 * time.Second // Wait for one additional second to ensure that we don't retry too early due to integer rounding issues.
+		// Wait for one additional second to ensure that we don't retry too early due to integer rounding issues.
+		delayTime += 1 * time.Second
 		if c.logger != nil {
-			_, _ = c.logger.Write([]byte(fmt.Sprintf("API rate limit hit. Retrying request in %s\n", delayTime.String())))
+			_, _ = c.logger.Write([]byte(fmt.Sprintf("API rate limit hit. Retrying request in %s\n",
+				delayTime.String())))
 		}
 		time.Sleep(delayTime)
 		return c.HTTPResBody(m, p, q)

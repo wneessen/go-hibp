@@ -16,11 +16,11 @@ SPDX-License-Identifier: MIT
 This Go library provides simple bindings to the excellent 
 "[Have I Been Pwned](https://haveibeenpwned.com/API/v3)" (HIBP) API by Troy Hunt. It implements all 3 APIs
 that are provided by HIBP (Breaches, Pastes, Passwords). API key support for the private API endpoints are 
-supported as well. go-hibp follows idiomatic Go style and best practice. It's only dependency is the Go Standard 
-Library. 
+supported as well. go-hibp follows idiomatic Go style and best practice. It's only depends on the Go standard 
+library and one of my other packages: [niljson](https://github.com/wneessen/niljson).
 
 ## Usage
-The library is fully documented using the execellent GoDoc functionality. Check out the
+The library is fully documented using the excellent GoDoc functionality. Check out the
 [GoDocs Reference](https://pkg.go.dev/github.com/wneessen/go-hibp) for details on how to implement 
 access to any of the 3 APIs with this package. You will also find GoDoc code examples there for each of those
 APIs.

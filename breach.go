@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/wneessen/niljson"
 )
 
 // BreachAPI is a HIBP breaches API client
@@ -89,6 +91,10 @@ type Breach struct {
 	// LogoPath represents a URI that specifies where a logo for the breached service can be found.
 	// Logos are always in PNG format
 	LogoPath string `json:"LogoPath"`
+
+	// present is an internal indicator. It is set to true if the Breach was returned by the HIBP API.
+	// It can be used to make sure if a returned Breach was empty or not.
+	present bool
 }
 
 type SubscribedDomains struct {
@@ -97,18 +103,18 @@ type SubscribedDomains struct {
 
 	// PwnCount is the total number of breached email addresses found on the domain at last search
 	// (will be null if no searches yet performed).
-	PwnCount *int `json:"PwnCount"`
+	PwnCount niljson.NilInt `json:"PwnCount"`
 
 	// PwnCountExcludingSpamLists is the number of breached email addresses found on the domain
 	// at last search, excluding any breaches flagged as a spam list (will be null if no
 	// searches yet performed).
-	PwnCountExcludingSpamLists *int `json:"PwnCountExcludingSpamLists"`
+	PwnCountExcludingSpamLists niljson.NilInt `json:"PwnCountExcludingSpamLists"`
 
 	// The total number of breached email addresses found on the domain when the current
 	// subscription was taken out (will be null if no searches yet performed). This number
 	// ensures the domain remains searchable throughout the subscription period even if the
 	// volume of breached accounts grows beyond the subscription's scope.
-	PwnCountExcludingSpamListsAtLastSubscriptionRenewal *int `json:"PwnCountExcludingSpamListsAtLastSubscriptionRenewal"`
+	PwnCountExcludingSpamListsAtLastSubscriptionRenewal niljson.NilInt `json:"PwnCountExcludingSpamListsAtLastSubscriptionRenewal"`
 
 	// The date and time the current subscription ends in ISO 8601 format. The
 	// PwnCountExcludingSpamListsAtLastSubscriptionRenewal value is locked in until this time (will
@@ -120,7 +126,7 @@ type SubscribedDomains struct {
 type BreachOption func(*BreachAPI)
 
 // Breaches returns a list of all breaches in the HIBP system
-func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response, error) {
+func (b *BreachAPI) Breaches(options ...BreachOption) ([]Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
 	au := fmt.Sprintf("%s/breaches", BaseURL)
 
@@ -129,53 +135,58 @@ func (b *BreachAPI) Breaches(options ...BreachOption) ([]*Breach, *http.Response
 		return nil, hr, err
 	}
 
-	var bl []*Breach
-	if err := json.Unmarshal(hb, &bl); err != nil {
+	var bl []Breach
+	if err = json.Unmarshal(hb, &bl); err != nil {
 		return nil, hr, err
+	}
+	for i := range bl {
+		bl[i].present = true
 	}
 
 	return bl, hr, nil
 }
 
 // BreachByName returns a single breached site based on its name
-func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (*Breach, *http.Response, error) {
+func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
+	var bd Breach
 
 	if n == "" {
-		return nil, nil, ErrNoName
+		return bd, nil, ErrNoName
 	}
 
 	au := fmt.Sprintf("%s/breach/%s", BaseURL, n)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
-	var bd *Breach
-	if err := json.Unmarshal(hb, &bd); err != nil {
-		return nil, hr, err
+	if err = json.Unmarshal(hb, &bd); err != nil {
+		return bd, hr, err
 	}
+	bd.present = true
 
 	return bd, hr, nil
 }
 
 // LatestBreach returns the single most recent breach
-func (b *BreachAPI) LatestBreach() (*Breach, *http.Response, error) {
+func (b *BreachAPI) LatestBreach() (Breach, *http.Response, error) {
+	var bd Breach
 	au := fmt.Sprintf("%s/latestbreach", BaseURL)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
-		return nil, hr, err
+		return bd, hr, err
 	}
 
-	var bd *Breach
-	if err := json.Unmarshal(hb, &bd); err != nil {
-		return nil, hr, err
+	if err = json.Unmarshal(hb, &bd); err != nil {
+		return bd, hr, err
 	}
+	bd.present = true
 
 	return bd, hr, nil
 }
 
-// DataClasses are attribute of a record compromised in a breach. This method returns a list of strings
+// DataClasses are attributes of a record compromised in a breach. This method returns a list of strings
 // with all registered data classes known to HIBP
 func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 	au := fmt.Sprintf("%s/dataclasses", BaseURL)
@@ -185,15 +196,19 @@ func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 	}
 
 	var dc []string
-	if err := json.Unmarshal(hb, &dc); err != nil {
+	if err = json.Unmarshal(hb, &dc); err != nil {
 		return nil, hr, err
 	}
 
 	return dc, hr, nil
 }
 
-// BreachedAccount returns a single breached site based on its name
-func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]*Breach, *http.Response, error) {
+// BreachedAccount returns all breaches for an account.
+// This API is authenticated and requires a valid API key
+//
+// Reference: https://haveibeenpwned.com/API/v3#BreachesForAccount
+func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]Breach, *http.Response, error) {
+	var bd []Breach
 	qp := b.setBreachOpts(options...)
 
 	if a == "" {
@@ -203,20 +218,27 @@ func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]*Breac
 	au := fmt.Sprintf("%s/breachedaccount/%s", BaseURL, a)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, qp)
 	if err != nil {
+		if hr != nil && hr.StatusCode == http.StatusNotFound {
+			return bd, nil, nil
+		}
 		return nil, hr, err
 	}
 
-	var bd []*Breach
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
+	}
+	for i := range bd {
+		bd[i].present = true
 	}
 
 	return bd, hr, nil
 }
 
 // SubscribedDomains returns domains that have been successfully added to the domain
-// search dashboard after verifying control are returned via this API. This is an
-// authenticated API requiring an HIBP API key which will then return all domains associated with that key.
+// search dashboard after verifying control are returned via this API.
+// This API is authenticated and requires a valid API key.
+//
+// Reference: https://haveibeenpwned.com/API/v3#SubscribedDomains
 func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, error) {
 	au := fmt.Sprintf("%s/subscribeddomains", BaseURL)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
@@ -225,7 +247,7 @@ func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, er
 	}
 
 	var bd []SubscribedDomains
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
@@ -235,15 +257,21 @@ func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, er
 // BreachedDomain returns all email addresses on a given domain and the breaches they've appeared
 // in can be returned via the domain search API. Only domains that have been successfully added
 // to the domain search dashboard after verifying control can be searched.
+// This API is authenticated and requires a valid API key.
+//
+// https://haveibeenpwned.com/API/v3#BreachesForDomain
 func (b *BreachAPI) BreachedDomain(domain string) (map[string][]string, *http.Response, error) {
+	var bd map[string][]string
 	au := fmt.Sprintf("%s/breacheddomain/%s", BaseURL, domain)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
+		if hr != nil && hr.StatusCode == http.StatusNotFound {
+			return bd, nil, nil
+		}
 		return nil, hr, err
 	}
 
-	var bd map[string][]string
-	if err := json.Unmarshal(hb, &bd); err != nil {
+	if err = json.Unmarshal(hb, &bd); err != nil {
 		return nil, hr, err
 	}
 
@@ -299,4 +327,9 @@ func (b *BreachAPI) setBreachOpts(options ...BreachOption) map[string]string {
 	}
 
 	return qp
+}
+
+// Present indicates whether the Breach object has been returned by the HIBP API.
+func (b Breach) Present() bool {
+	return b.present
 }

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev> et al
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+SPDX-PackageName = "go-hibp"
+SPDX-PackageSupplier = "Winni Neessen <wn@neessen.dev>"
+SPDX-PackageDownloadLocation = "https://github.com/wneessen/go-hibp"
+
+[[annotations]]
+path = ["testdata/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Winni Neessen <wn@neessen.dev> et al"
+SPDX-License-Identifier = "MIT"

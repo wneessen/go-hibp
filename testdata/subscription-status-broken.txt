@@ -1,0 +1,1 @@
+{"SubscribedUntil":2025,"SubscriptionName":"Pwned 1","Description":"Domains with up to 25 breached addresses each, and a rate limited API key allowing 10 email address searches per minute","DomainSearchMaxBreachedAccounts":25,"Rpm":10}
