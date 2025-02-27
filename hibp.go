@@ -6,7 +6,6 @@
 package hibp
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -66,6 +65,9 @@ var (
 
 	// ErrUnsupportedHashMode should be used if a given hash mode is not supported
 	ErrUnsupportedHashMode = errors.New("hash mode not supported")
+
+	// ErrHTTPRequestMethodUnsupported indicates that the HTTP request method used is not supported.
+	ErrHTTPRequestMethodUnsupported = errors.New("HTTP request method not supported")
 )
 
 // HTTPClient is an interface representing an HTTP client capable of executing HTTP requests and
@@ -205,27 +207,18 @@ func (c *Client) HTTPReq(m, p string, q map[string]string) (*http.Request, error
 		return nil, err
 	}
 
-	if m == http.MethodGet {
-		uq := u.Query()
-		for k, v := range q {
-			uq.Add(k, v)
-		}
-		u.RawQuery = uq.Encode()
+	if m != http.MethodGet {
+		return nil, ErrHTTPRequestMethodUnsupported
 	}
+	uq := u.Query()
+	for k, v := range q {
+		uq.Add(k, v)
+	}
+	u.RawQuery = uq.Encode()
 
 	hr, err := http.NewRequest(m, u.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if m == http.MethodPost {
-		pd := url.Values{}
-		for k, v := range q {
-			pd.Add(k, v)
-		}
-
-		rb := io.NopCloser(bytes.NewBufferString(pd.Encode()))
-		hr.Body = rb
 	}
 
 	hr.Header.Set("Accept", "application/json")
