@@ -15,11 +15,6 @@ import (
 )
 
 const (
-	validDateJSON     = `{"date": "2022-10-01"}`
-	validNullDateJSON = `{"date": "null"}`
-	invalidJSON       = `{"date": '2022-10-01'}`
-	invalidDateJSON   = `{"date": "202299-10-01"}`
-
 	// ServerResponseBreachesAllTruncatedUnverified represents the file path to a test dataset of all
 	// truncated unverified breaches.
 	ServerResponseBreachesAllTruncatedUnverified = "testdata/breach-all-truncated-unverified.txt"
@@ -163,6 +158,32 @@ func TestBreachAPI_Breaches(t *testing.T) {
 		_, _, err := hc.BreachAPI.Breaches()
 		if err == nil {
 			t.Error("expected error, got nil")
+		}
+	})
+	t.Run("return all breaches succeeds on rate limit", func(t *testing.T) {
+		run := 0
+		server := httptest.NewServer(newTestRetryHandler(t, &run, true))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithRateLimitSleep(), WithLogger(newTestLogger(t)))
+		_, _, err := hc.BreachAPI.Breaches()
+		if err != nil {
+			t.Errorf("failed to get breaches: %s", err)
+		}
+	})
+	t.Run("return all breaches fails on rate limit", func(t *testing.T) {
+		run := 0
+		server := httptest.NewServer(newTestRetryHandler(t, &run, true))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithLogger(newTestLogger(t)))
+		_, hr, err := hc.BreachAPI.Breaches()
+		if err == nil {
+			t.Error("expected request to fail due to rate limiting")
+		}
+		if hr == nil {
+			t.Fatal("expected HTTP response to be returned")
+		}
+		if hr.StatusCode != http.StatusTooManyRequests {
+			t.Errorf("expected HTTP status code to be %d, got %d", http.StatusTooManyRequests, hr.StatusCode)
 		}
 	})
 }
