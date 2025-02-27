@@ -443,7 +443,7 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 		resp := fmt.Sprintf(ServerResponseBreachAccount, email)
 		server := httptest.NewServer(newTestFileHandler(t, resp))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		breaches, _, err := hc.BreachAPI.BreachedAccount("toni.tester@domain.tld")
 		if err != nil {
 			t.Errorf("failed to get breached account: %s", err)
@@ -457,7 +457,7 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 		resp := fmt.Sprintf(ServerResponseBreachAccount, email)
 		server := httptest.NewServer(newTestFileHandler(t, resp))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.BreachedAccount("")
 		if err == nil {
 			t.Error("expected to fail with empty account id")
@@ -469,7 +469,7 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 	t.Run("account request with no findings empty breaches list", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusNotFound))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		breach, _, err := hc.BreachAPI.BreachedAccount("does.not.exist@domain.tld")
 		if err != nil {
 			t.Errorf("failed to get breached account: %s", err)
@@ -481,7 +481,7 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 	t.Run("account request fails on HTTP error", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.BreachedAccount("does.not.exist@domain.tld")
 		if err == nil {
 			t.Error("expected to fail on HTTP error")
@@ -492,7 +492,7 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 		resp := fmt.Sprintf(ServerResponseBreachAccountBroken, email)
 		server := httptest.NewServer(newTestFileHandler(t, resp))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.BreachedAccount("does.not.exist@domain.tld")
 		if err == nil {
 			t.Error("expected to fail on broken JSON")
@@ -501,13 +501,17 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 }
 
 func TestBreachAPI_SubscribedDomains(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
 	t.Run("subscribed domains successfully returns data", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachSubscribedDomains))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		domains, _, err := hc.BreachAPI.SubscribedDomains()
 		if err != nil {
-			t.Errorf("failed to get subscribed domains: %s", err)
+			t.Fatalf("failed to get subscribed domains: %s", err)
 		}
 		if len(domains) != 1 {
 			t.Errorf("expected %d subscribed domains, got %d", 1, len(domains))
@@ -527,7 +531,7 @@ func TestBreachAPI_SubscribedDomains(t *testing.T) {
 	t.Run("subscribed domains should fail on HTTP error", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.SubscribedDomains()
 		if err == nil {
 			t.Errorf("expected to fail on HTTP error")
@@ -536,7 +540,7 @@ func TestBreachAPI_SubscribedDomains(t *testing.T) {
 	t.Run("subscribed domains with broken JSON should fail", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachSubscribedDomainsBroken))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.SubscribedDomains()
 		if err == nil {
 			t.Errorf("expected to fail on broken JSON")
@@ -545,13 +549,17 @@ func TestBreachAPI_SubscribedDomains(t *testing.T) {
 }
 
 func TestBreachAPI_BreachedDomain(t *testing.T) {
+	apiKey := os.Getenv("HIBP_API_KEY")
+	if apiKey == "" {
+		t.SkipNow()
+	}
 	t.Run("breached domain successfully returns data", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachedDomain))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		accounts, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
 		if err != nil {
-			t.Errorf("failed to get breached domains %s", err)
+			t.Errorf("failed to get breached domains: %s", err)
 		}
 		if len(accounts) != 6 {
 			t.Errorf("expected %d breached accounts, got %d", 6, len(accounts))
@@ -560,7 +568,7 @@ func TestBreachAPI_BreachedDomain(t *testing.T) {
 	t.Run("breached domain with no breaches returns empty list", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusNotFound))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		accounts, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
 		if err != nil {
 			t.Errorf("failed to get breached domains %s", err)
@@ -572,7 +580,7 @@ func TestBreachAPI_BreachedDomain(t *testing.T) {
 	t.Run("breached domain with HTTP error should fail", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
 		if err == nil {
 			t.Errorf("expected to fail on HTTP error")
@@ -581,7 +589,7 @@ func TestBreachAPI_BreachedDomain(t *testing.T) {
 	t.Run("breached domain with broken JSON should fail", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachedDomainBroken))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
 		if err == nil {
 			t.Errorf("expected to fail on broken JSON")

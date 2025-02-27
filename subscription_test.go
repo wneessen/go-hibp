@@ -30,7 +30,7 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 	t.Run("subscription status is returned successfully", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseSubscriptionStatus))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		status, _, err := hc.SubscriptionAPI.Status()
 		if err != nil {
 			t.Errorf("failed to get subscription status: %s", err)
@@ -45,7 +45,7 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 	t.Run("subscription status fails on HTTP error", func(t *testing.T) {
 		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.SubscriptionAPI.Status()
 		if err == nil {
 			t.Error("expected subscription status request to fail on HTTP error")
@@ -54,7 +54,7 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 	t.Run("subscription status fails on broken JSON", func(t *testing.T) {
 		server := httptest.NewServer(newTestFileHandler(t, ServerResponseSubscriptionStatusBroken))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithAPIKey(apiKey))
 		_, _, err := hc.SubscriptionAPI.Status()
 		if err == nil {
 			t.Error("expected subscription status request to fail on broken JSON")
@@ -64,7 +64,8 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 		run := 0
 		server := httptest.NewServer(newTestRetryHandler(t, &run, false))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithRateLimitSleep(), WithLogger(newTestLogger(t)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithRateLimitSleep(), WithLogger(newTestLogger(t)),
+			WithAPIKey(apiKey))
 		_, _, err := hc.SubscriptionAPI.Status()
 		if err != nil {
 			t.Errorf("failed to get subscription status: %s", err)
@@ -74,7 +75,7 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 		run := 0
 		server := httptest.NewServer(newTestRetryHandler(t, &run, false))
 		defer server.Close()
-		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithLogger(newTestLogger(t)))
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithLogger(newTestLogger(t)), WithAPIKey(apiKey))
 		_, hr, err := hc.SubscriptionAPI.Status()
 		if err == nil {
 			t.Error("expected subscription status request to fail on HTTP error")
