@@ -60,6 +60,8 @@ type PwnedPasswordOptions struct {
 //
 // This method will automatically decide whether the hash is in SHA-1 or NTLM format based on
 // the Option when the Client was initialized
+//
+// Reference: https://haveibeenpwned.com/API/v3#SearchingPwnedPasswordsByRange
 func (p *PwnedPassAPI) CheckPassword(pw string) (Match, *http.Response, error) {
 	switch p.hibp.PwnedPassAPIOpts.HashMode {
 	case HashModeSHA1:
@@ -127,6 +129,10 @@ func (p *PwnedPassAPI) CheckNTLM(h string) (Match, *http.Response, error) {
 //
 // NOTE: If the `WithPwnedPadding` option is set to true, the returned list will be padded and might
 // contain junk data
+//
+// References:
+// - https://haveibeenpwned.com/API/v3#SearchingPwnedPasswordsByRange
+// - https://haveibeenpwned.com/API/v3#PwnedPasswordsPadding
 func (p *PwnedPassAPI) ListHashesPassword(pw string) ([]Match, *http.Response, error) {
 	switch p.hibp.PwnedPassAPIOpts.HashMode {
 	case HashModeSHA1:
