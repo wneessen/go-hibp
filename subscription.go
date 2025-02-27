@@ -43,6 +43,9 @@ type SubscriptionStatus struct {
 }
 
 // Status returns details of the current subscription.
+// This API is authenticated and requires a valid API key.
+//
+// Reference: https://haveibeenpwned.com/API/v3#SubscriptionStatus
 func (s *SubscriptionAPI) Status() (SubscriptionStatus, *http.Response, error) {
 	var status SubscriptionStatus
 	au := fmt.Sprintf("%s/subscription/status", BaseURL)

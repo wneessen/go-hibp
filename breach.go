@@ -126,6 +126,8 @@ type SubscribedDomains struct {
 type BreachOption func(*BreachAPI)
 
 // Breaches returns a list of all breaches in the HIBP system
+//
+// Reference: https://haveibeenpwned.com/API/v3#AllBreaches
 func (b *BreachAPI) Breaches(options ...BreachOption) ([]Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
 	au := fmt.Sprintf("%s/breaches", BaseURL)
@@ -147,6 +149,8 @@ func (b *BreachAPI) Breaches(options ...BreachOption) ([]Breach, *http.Response,
 }
 
 // BreachByName returns a single breached site based on its name
+//
+// Reference: https://haveibeenpwned.com/API/v3#SingleBreach
 func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (Breach, *http.Response, error) {
 	qp := b.setBreachOpts(options...)
 	var bd Breach
@@ -170,6 +174,8 @@ func (b *BreachAPI) BreachByName(n string, options ...BreachOption) (Breach, *ht
 }
 
 // LatestBreach returns the single most recent breach
+//
+// Reference: https://haveibeenpwned.com/API/v3#MostRecentBreach
 func (b *BreachAPI) LatestBreach() (Breach, *http.Response, error) {
 	var bd Breach
 	au := fmt.Sprintf("%s/latestbreach", BaseURL)
@@ -188,6 +194,8 @@ func (b *BreachAPI) LatestBreach() (Breach, *http.Response, error) {
 
 // DataClasses are attributes of a record compromised in a breach. This method returns a list of strings
 // with all registered data classes known to HIBP
+//
+// Reference: https://haveibeenpwned.com/API/v3#AllDataClasses
 func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 	au := fmt.Sprintf("%s/dataclasses", BaseURL)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
@@ -203,7 +211,7 @@ func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 	return dc, hr, nil
 }
 
-// BreachedAccount returns all breaches for an account.
+// BreachedAccount returns all breaches for an account
 // This API is authenticated and requires a valid API key
 //
 // Reference: https://haveibeenpwned.com/API/v3#BreachesForAccount

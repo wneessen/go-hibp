@@ -44,6 +44,9 @@ type Paste struct {
 }
 
 // PastedAccount returns a single breached site based on its name
+// This API is authenticated and requires a valid API key.
+//
+// Reference: https://haveibeenpwned.com/API/v3#PastesForAccount
 func (p *PasteAPI) PastedAccount(a string) ([]Paste, *http.Response, error) {
 	if a == "" {
 		return nil, nil, ErrNoAccountID
