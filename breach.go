@@ -92,7 +92,7 @@ type Breach struct {
 	// Logos are always in PNG format
 	LogoPath string `json:"LogoPath"`
 
-	// found is an internal indicator. It is set to true if the Breach was returned by the HIBP API.
+	// present is an internal indicator. It is set to true if the Breach was returned by the HIBP API.
 	// It can be used to make sure if a returned Breach was empty or not.
 	present bool
 }
@@ -329,7 +329,7 @@ func (b *BreachAPI) setBreachOpts(options ...BreachOption) map[string]string {
 	return qp
 }
 
-// Present indicates whether the breach object has been returned by the HIBP API.
+// Present indicates whether the Breach object has been returned by the HIBP API.
 func (b Breach) Present() bool {
 	return b.present
 }
