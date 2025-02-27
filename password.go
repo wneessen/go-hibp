@@ -29,6 +29,10 @@ type PwnedPassAPI struct {
 type Match struct {
 	Hash  string // SHA1 hash of the matching password
 	Count int64  // Represents the number of leaked accounts that hold/held this password
+
+	// present is an internal indicator. It is set to true if the Match was returned by the HIBP API.
+	// It can be used to make sure if a returned Match was empty or not.
+	present bool
 }
 
 type HashMode int
@@ -56,7 +60,7 @@ type PwnedPasswordOptions struct {
 //
 // This method will automatically decide whether the hash is in SHA-1 or NTLM format based on
 // the Option when the Client was initialized
-func (p *PwnedPassAPI) CheckPassword(pw string) (*Match, *http.Response, error) {
+func (p *PwnedPassAPI) CheckPassword(pw string) (Match, *http.Response, error) {
 	switch p.hibp.PwnedPassAPIOpts.HashMode {
 	case HashModeSHA1:
 		shaSum := fmt.Sprintf("%x", sha1.Sum([]byte(pw)))
@@ -67,48 +71,52 @@ func (p *PwnedPassAPI) CheckPassword(pw string) (*Match, *http.Response, error) 
 		md4Sum := fmt.Sprintf("%x", d.Sum(nil))
 		return p.CheckNTLM(md4Sum)
 	default:
-		return nil, nil, ErrUnsupportedHashMode
+		return Match{}, nil, ErrUnsupportedHashMode
 	}
 }
 
 // CheckSHA1 checks the Pwned Passwords database against a given SHA1 checksum of a password string
-func (p *PwnedPassAPI) CheckSHA1(h string) (*Match, *http.Response, error) {
+func (p *PwnedPassAPI) CheckSHA1(h string) (Match, *http.Response, error) {
 	if len(h) != 40 {
-		return nil, nil, ErrSHA1LengthMismatch
+		return Match{}, nil, ErrSHA1LengthMismatch
 	}
 
 	p.hibp.PwnedPassAPIOpts.HashMode = HashModeSHA1
 	pwMatches, hr, err := p.ListHashesPrefix(h[:5])
 	if err != nil {
-		return &Match{}, hr, err
+		return Match{}, hr, err
 	}
 
-	for _, m := range pwMatches {
-		if m.Hash == strings.ToLower(h) {
-			return &m, hr, nil
+	for i := range pwMatches {
+		match := pwMatches[i]
+		if match.Hash == strings.ToLower(h) {
+			match.present = true
+			return match, hr, nil
 		}
 	}
-	return nil, hr, nil
+	return Match{}, hr, nil
 }
 
 // CheckNTLM checks the Pwned Passwords database against a given NTLM hash of a password string
-func (p *PwnedPassAPI) CheckNTLM(h string) (*Match, *http.Response, error) {
+func (p *PwnedPassAPI) CheckNTLM(h string) (Match, *http.Response, error) {
 	if len(h) != 32 {
-		return nil, nil, ErrNTLMLengthMismatch
+		return Match{}, nil, ErrNTLMLengthMismatch
 	}
 
 	p.hibp.PwnedPassAPIOpts.HashMode = HashModeNTLM
 	pwMatches, hr, err := p.ListHashesPrefix(h[:5])
 	if err != nil {
-		return &Match{}, hr, err
+		return Match{}, hr, err
 	}
 
-	for _, m := range pwMatches {
-		if m.Hash == strings.ToLower(h) {
-			return &m, hr, nil
+	for i := range pwMatches {
+		match := pwMatches[i]
+		if match.Hash == strings.ToLower(h) {
+			match.present = true
+			return match, hr, nil
 		}
 	}
-	return nil, hr, nil
+	return Match{}, hr, nil
 }
 
 // ListHashesPassword checks the Pwned Password API endpoint for all hashes based on a given
@@ -221,8 +229,9 @@ func (p *PwnedPassAPI) ListHashesPrefix(pf string) ([]Match, *http.Response, err
 			continue
 		}
 		pm = append(pm, Match{
-			Hash:  fh,
-			Count: hc,
+			Hash:    fh,
+			Count:   hc,
+			present: true,
 		})
 	}
 
@@ -242,4 +251,9 @@ func stringToUTF16(s string) []byte {
 		r[i*2+1] = byte(e[i] << 8)
 	}
 	return r
+}
+
+// Present indicates whether the Match object has been returned by the HIBP API.
+func (m Match) Present() bool {
+	return m.present
 }
