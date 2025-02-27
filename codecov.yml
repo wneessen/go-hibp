@@ -18,5 +18,8 @@ coverage:
         if_ci_failed: error
         threshold: 5%
 
+ignore:
+  - "md4/"
+
 comment:
   require_changes: true
