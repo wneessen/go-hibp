@@ -37,10 +37,14 @@ type Paste struct {
 	// EmailCount is number of emails that were found when processing the paste. Emails are extracted by
 	// using the regular expression \b[a-zA-Z0-9\.\-_\+]+@[a-zA-Z0-9\.\-_]+\.[a-zA-Z]+\b
 	EmailCount int `json:"EmailCount"`
+
+	// present is an internal indicator. It is set to true if the Paste was returned by the HIBP API.
+	// It can be used to make sure if a returned Paste was empty or not.
+	present bool
 }
 
 // PastedAccount returns a single breached site based on its name
-func (p *PasteAPI) PastedAccount(a string) ([]*Paste, *http.Response, error) {
+func (p *PasteAPI) PastedAccount(a string) ([]Paste, *http.Response, error) {
 	if a == "" {
 		return nil, nil, ErrNoAccountID
 	}
@@ -48,13 +52,24 @@ func (p *PasteAPI) PastedAccount(a string) ([]*Paste, *http.Response, error) {
 	au := fmt.Sprintf("%s/pasteaccount/%s", BaseURL, a)
 	hb, hr, err := p.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
+		if hr != nil && hr.StatusCode == http.StatusNotFound {
+			return nil, hr, nil
+		}
 		return nil, hr, err
 	}
 
-	var pd []*Paste
-	if err := json.Unmarshal(hb, &pd); err != nil {
+	var pd []Paste
+	if err = json.Unmarshal(hb, &pd); err != nil {
 		return nil, hr, err
+	}
+	for i := range pd {
+		pd[i].present = true
 	}
 
 	return pd, hr, nil
+}
+
+// Present indicates whether the Paste object has been returned by the HIBP API.
+func (p Paste) Present() bool {
+	return p.present
 }

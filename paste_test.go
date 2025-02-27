@@ -7,88 +7,89 @@ package hibp
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
 
-// TestPasteAPI_PastedAccount tests the PastedAccount() method of the pastes API
+const (
+	// ServerResponsePastesAccountExists represents the filename of the test data indicating an existing
+	// account for pastes.
+	ServerResponsePastesAccountExists = "testdata/pastes-account-exist.txt"
+
+	// ServerResponsePastesAccountExistsBroken represents the filename of the test data for a broken response
+	// indicating an account exists.
+	ServerResponsePastesAccountExistsBroken = "testdata/pastes-account-exist-broken.txt"
+)
+
 func TestPasteAPI_PastedAccount(t *testing.T) {
-	testTable := []struct {
-		testName    string
-		accountName string
-		isPasted    bool
-		shouldFail  bool
-	}{
-		{
-			"account-exists is found in pastes", "account-exists@hibp-integration-tests.com",
-			true, false,
-		},
-		{
-			"opt-out is not found in pastes", "opt-out-breach@hibp-integration-tests.com",
-			false, true,
-		},
-		{"empty account name", "", false, true},
-	}
-
 	apiKey := os.Getenv("HIBP_API_KEY")
 	if apiKey == "" {
 		t.SkipNow()
 	}
-	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
-	for _, tc := range testTable {
-		t.Run(tc.testName, func(t *testing.T) {
-			pasteDetails, _, err := hc.PasteAPI.PastedAccount(tc.accountName)
-			if err != nil && !tc.shouldFail {
-				t.Error(err)
-				return
-			}
-
-			if pasteDetails == nil && tc.isPasted {
-				t.Errorf("paste for the account %q is expected, but returned 0 results.",
-					tc.accountName)
-			}
-			if pasteDetails != nil && !tc.isPasted {
-				t.Errorf("paste for the account %q is expected to be not found, but returned paste details.",
-					tc.accountName)
-			}
-		})
-	}
-}
-
-// TestPasteAPI_PastedAccount_WithFailedHTTP tests the PastedAccount() method of the pastes API with a failing HTTP request
-func TestPasteAPI_PastedAccount_WithFailedHTTP(t *testing.T) {
-	apiKey := os.Getenv("HIBP_API_KEY")
-	if apiKey == "" {
-		t.SkipNow()
-	}
-	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
-	_, res, err := hc.PasteAPI.PastedAccount("öccount-exists@hibp-integration-tests.com")
-	if err == nil {
-		t.Errorf("HTTP request for paste should have failed but did not")
-		return
-	}
-	if res == nil {
-		t.Errorf("HTTP request for paste should have returned the HTTP response but did not")
-	}
-}
-
-// TestPasteAPI_PastedAccount_Errors tests the errors defined for the PastedAccount() method
-func TestPasteAPI_PastedAccount_Errors(t *testing.T) {
-	apiKey := os.Getenv("HIBP_API_KEY")
-	if apiKey == "" {
-		t.SkipNow()
-	}
-	hc := New(WithAPIKey(apiKey), WithRateLimitSleep())
-
-	// No account ID given
-	_, _, err := hc.PasteAPI.PastedAccount("")
-	if err == nil {
-		t.Errorf("HTTP request for paste should have failed but did not")
-		return
-	}
-	if !errors.Is(err, ErrNoAccountID) {
-		t.Errorf("error response for empty account ID should have been ErrNoAccountID but is not")
-	}
+	t.Run("account-exists is found in pastes", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePastesAccountExists))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		pastes, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err != nil {
+			t.Errorf("failed to get pasted account details: %s", err)
+		}
+		if len(pastes) != 1 {
+			t.Fatalf("expected %d paste(s), got %d", 1, len(pastes))
+		}
+		paste := pastes[0]
+		if !paste.Present() {
+			t.Error("paste is expected to be present, but is not")
+		}
+		if !strings.EqualFold(paste.Title, "nmd") {
+			t.Errorf("paste title is expected to be 'nmd', but is %q", paste.Title)
+		}
+	})
+	t.Run("opt-out is not found in pastes", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusNotFound))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		pastes, _, err := hc.PasteAPI.PastedAccount("opt-out-breach@hibp-integration-tests.com")
+		if err != nil {
+			t.Errorf("failed to get pasted account details: %s", err)
+		}
+		if len(pastes) != 0 {
+			t.Error("expected no pastes to be returned, but got some")
+		}
+	})
+	t.Run("pasted account fails on broken JSON", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePastesAccountExistsBroken))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err == nil {
+			t.Error("expected pasted account request to fail on broken JSON")
+		}
+	})
+	t.Run("pasted account with empty account id fails", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponsePastesAccountExists))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PasteAPI.PastedAccount("")
+		if err == nil {
+			t.Error("expected pasted account request to fail with empty account id")
+		}
+		if !errors.Is(err, ErrNoAccountID) {
+			t.Errorf("expected error to be %q, got %q", ErrNoAccountID, err)
+		}
+	})
+	t.Run("pasted account fails on HTTP error", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err == nil {
+			t.Error("expected pasted account request to fail on HTTP error")
+		}
+	})
 }
 
 // ExamplePasteAPI_pastedAccount is a code example to show how to fetch a specific paste
