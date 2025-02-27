@@ -88,10 +88,10 @@ func TestPwnedPassAPI_CheckPassword(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				if m == nil && tc.isLeaked {
+				if !m.Present() && tc.isLeaked {
 					t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
 				}
-				if m != nil && m.Count > 0 && !tc.isLeaked {
+				if m.Present() && m.Count > 0 && !tc.isLeaked {
 					t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
 						m.Count)
 				}
@@ -108,10 +108,10 @@ func TestPwnedPassAPI_CheckPassword(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				if m == nil && tc.isLeaked {
+				if !m.Present() && tc.isLeaked {
 					t.Errorf("password is expected to be leaked but 0 leaks were returned in Pwned Passwords DB")
 				}
-				if m != nil && m.Count > 0 && !tc.isLeaked {
+				if m.Present() && m.Count > 0 && !tc.isLeaked {
 					t.Errorf("password is not expected to be leaked but %d leaks were found in Pwned Passwords DB",
 						m.Count)
 				}
@@ -336,7 +336,7 @@ func ExamplePwnedPassAPI_CheckPassword() {
 	if err != nil {
 		panic(err)
 	}
-	if m != nil && m.Count != 0 {
+	if m.Present() && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
 		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
@@ -350,7 +350,7 @@ func ExamplePwnedPassAPI_CheckPassword_withPadding() {
 	if err != nil {
 		panic(err)
 	}
-	if m != nil && m.Count != 0 {
+	if m.Present() && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
 		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
@@ -365,7 +365,7 @@ func ExamplePwnedPassAPI_checkSHA1() {
 	if err != nil {
 		panic(err)
 	}
-	if m != nil && m.Count != 0 {
+	if m.Present() && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
 		// Output: Your password with the hash "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3" was found in the pwned passwords DB
 	}
@@ -380,7 +380,7 @@ func ExamplePwnedPassAPI_checkNTLM() {
 	if err != nil {
 		panic(err)
 	}
-	if m != nil && m.Count != 0 {
+	if m.Present() && m.Count != 0 {
 		fmt.Printf("Your password with the hash %q was found in the pwned passwords DB\n", m.Hash)
 		// Output: Your password with the hash "0cb6948805f797bf2a82807973b89537" was found in the pwned passwords DB
 	}
