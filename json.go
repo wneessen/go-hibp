@@ -34,7 +34,7 @@ func (a *APIDate) UnmarshalJSON(p []byte) error {
 		return errors.New("failed to parse JSON string as API date: unknown date format")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to parse JSON string as API date: %s", err)
+		return fmt.Errorf("failed to parse JSON string as API date: %w", err)
 	}
 
 	a.Time = parsed
