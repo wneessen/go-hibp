@@ -90,6 +90,32 @@ func TestPasteAPI_PastedAccount(t *testing.T) {
 			t.Error("expected pasted account request to fail on HTTP error")
 		}
 	})
+	t.Run("pasted account with retry after rate limit succeeds", func(t *testing.T) {
+		run := 0
+		server := httptest.NewServer(newTestRetryHandler(t, &run, true))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithRateLimitSleep(), WithLogger(newTestLogger(t)))
+		_, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err != nil {
+			t.Errorf("failed to get pasted account details: %s", err)
+		}
+	})
+	t.Run("pasted account with retry after rate limit fails", func(t *testing.T) {
+		run := 0
+		server := httptest.NewServer(newTestRetryHandler(t, &run, true))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)), WithLogger(newTestLogger(t)))
+		_, hr, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err == nil {
+			t.Error("expected pasted account request to fail on HTTP error")
+		}
+		if hr == nil {
+			t.Fatal("expected HTTP response to be returned")
+		}
+		if hr.StatusCode != http.StatusTooManyRequests {
+			t.Errorf("expected HTTP status code to be %d, got %d", http.StatusTooManyRequests, hr.StatusCode)
+		}
+	})
 }
 
 // ExamplePasteAPI_pastedAccount is a code example to show how to fetch a specific paste
