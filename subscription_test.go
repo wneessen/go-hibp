@@ -5,6 +5,7 @@
 package hibp
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -85,6 +86,18 @@ func TestSubscriptionAPI_Status(t *testing.T) {
 		}
 		if hr.StatusCode != http.StatusTooManyRequests {
 			t.Errorf("expected HTTP status code to be %d, got %d", http.StatusTooManyRequests, hr.StatusCode)
+		}
+	})
+	t.Run("subscription status fails if no API key is provided", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseSubscriptionStatus))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.SubscriptionAPI.Status()
+		if err == nil {
+			t.Error("expected subscription status request to fail if no API key is provided")
+		}
+		if !errors.Is(err, ErrMethodRequiresAPIKey) {
+			t.Errorf("expected error to be %q, got %q", ErrMethodRequiresAPIKey, err)
 		}
 	})
 }
