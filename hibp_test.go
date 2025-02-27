@@ -227,6 +227,28 @@ func TestClient_integration_tests(t *testing.T) {
 			t.Fatal("PastedAccount was expected to return no pastes")
 		}
 	})
+	t.Run("SubscriptionAPI Status", func(t *testing.T) {
+		if apiKey == "" {
+			t.SkipNow()
+		}
+		hc := New(WithLogger(newTestLogger(t)), WithAPIKey(apiKey), WithRateLimitSleep())
+		status, _, err := hc.SubscriptionAPI.Status()
+		if err != nil {
+			t.Errorf("SubscriptionAPI Status failed: %s", err)
+		}
+		if !status.Present() {
+			t.Fatal("SubscriptionAPI Status was expected to return a status")
+		}
+		if status.SubscriptionName == "" {
+			t.Error("SubscriptionAPI Status returned an empty subscription name")
+		}
+		if status.SubscribedUntil.IsZero() {
+			t.Error("SubscriptionAPI Status returned an empty subscription expiration date")
+		}
+		if status.Description == "" {
+			t.Error("SubscriptionAPI Status returned an empty subscription description")
+		}
+	})
 }
 
 func TestClient_HTTPReq(t *testing.T) {
