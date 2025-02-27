@@ -48,6 +48,9 @@ type SubscriptionStatus struct {
 // Reference: https://haveibeenpwned.com/API/v3#SubscriptionStatus
 func (s *SubscriptionAPI) Status() (SubscriptionStatus, *http.Response, error) {
 	var status SubscriptionStatus
+	if err := requiresAPIKey(s.hibp); err != nil {
+		return status, nil, err
+	}
 	au := fmt.Sprintf("%s/subscription/status", BaseURL)
 	hb, hr, err := s.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {

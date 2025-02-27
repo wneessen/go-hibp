@@ -217,6 +217,9 @@ func (b *BreachAPI) DataClasses() ([]string, *http.Response, error) {
 // Reference: https://haveibeenpwned.com/API/v3#BreachesForAccount
 func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]Breach, *http.Response, error) {
 	var bd []Breach
+	if err := requiresAPIKey(b.hibp); err != nil {
+		return bd, nil, err
+	}
 	qp := b.setBreachOpts(options...)
 
 	if a == "" {
@@ -248,6 +251,9 @@ func (b *BreachAPI) BreachedAccount(a string, options ...BreachOption) ([]Breach
 //
 // Reference: https://haveibeenpwned.com/API/v3#SubscribedDomains
 func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, error) {
+	if err := requiresAPIKey(b.hibp); err != nil {
+		return nil, nil, err
+	}
 	au := fmt.Sprintf("%s/subscribeddomains", BaseURL)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
 	if err != nil {
@@ -269,6 +275,9 @@ func (b *BreachAPI) SubscribedDomains() ([]SubscribedDomains, *http.Response, er
 //
 // https://haveibeenpwned.com/API/v3#BreachesForDomain
 func (b *BreachAPI) BreachedDomain(domain string) (map[string][]string, *http.Response, error) {
+	if err := requiresAPIKey(b.hibp); err != nil {
+		return nil, nil, err
+	}
 	var bd map[string][]string
 	au := fmt.Sprintf("%s/breacheddomain/%s", BaseURL, domain)
 	hb, hr, err := b.hibp.HTTPResBody(http.MethodGet, au, nil)
