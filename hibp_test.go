@@ -7,9 +7,11 @@ package hibp
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
@@ -192,46 +194,148 @@ func TestClient_integration_tests(t *testing.T) {
 			t.Error("SubscribedDomains returned an empty list")
 		}
 	})
+	t.Run("PastesAPI PastedAccount exists", func(t *testing.T) {
+		if apiKey == "" {
+			t.SkipNow()
+		}
+		hc := New(WithLogger(newTestLogger(t)), WithAPIKey(apiKey), WithRateLimitSleep())
+		pastes, _, err := hc.PasteAPI.PastedAccount("account-exists@hibp-integration-tests.com")
+		if err != nil {
+			t.Errorf("PastedAccount failed: %s", err)
+		}
+		if len(pastes) != 1 {
+			t.Fatalf("PastedAccount was expected to return 1 paste, got: %d", len(pastes))
+		}
+		paste := pastes[0]
+		if !paste.Present() {
+			t.Fatal("PastedAccount was expected to return a paste")
+		}
+		if !strings.EqualFold(paste.Title, "nmd") {
+			t.Errorf("PastedAccount returned an unexpected paste title: %s", paste.Title)
+		}
+	})
+	t.Run("PastesAPI PastedAccount does not exist", func(t *testing.T) {
+		if apiKey == "" {
+			t.SkipNow()
+		}
+		hc := New(WithLogger(newTestLogger(t)), WithAPIKey(apiKey), WithRateLimitSleep())
+		pastes, _, err := hc.PasteAPI.PastedAccount("opt-out-breach@hibp-integration-tests.com")
+		if err != nil {
+			t.Errorf("PastedAccount failed: %s", err)
+		}
+		if len(pastes) != 0 {
+			t.Fatal("PastedAccount was expected to return no pastes")
+		}
+	})
 }
 
-/*
 func TestClient_HTTPReq(t *testing.T) {
-	u1 := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
-	u2 := "this://is.invalid.tld/"
-	hc := New()
-	_, err := hc.HTTPReq(http.MethodGet, u1, map[string]string{"foo": "bar"})
-	if err == nil {
-		t.Errorf("HTTP GET request was supposed to fail, but didn't")
-	}
-	_, err = hc.HTTPReq("äöü", u2, map[string]string{"foo": "bar"})
-	if err == nil {
-		t.Errorf("HTTP GET request was supposed to fail, but didn't")
-	}
-	_, err = hc.HTTPReq("POST", u2, map[string]string{"foo": "bar"})
-	if err != nil {
-		t.Errorf("HTTP POST request failed: %s", err)
-	}
+	t.Run("HTTP GET request preparation succeeds", func(t *testing.T) {
+		server := httptest.NewServer(newTestStringHandler(t, "test"))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		req, err := hc.HTTPReq(http.MethodGet, server.URL, map[string]string{"foo": "bar"})
+		if err != nil {
+			t.Errorf("HTTP GET request failed: %s", err)
+		}
+		if req.Method != http.MethodGet {
+			t.Errorf("HTTP GET request method was not set properly. Expected %s, got: %s",
+				http.MethodGet, req.Method)
+		}
+	})
+	t.Run("HTTP POST request preparation fails", func(t *testing.T) {
+		server := httptest.NewServer(newTestStringHandler(t, "test"))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, err := hc.HTTPReq(http.MethodPost, server.URL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP POST request preparation was supposed to fail")
+		}
+		if !errors.Is(err, ErrHTTPRequestMethodUnsupported) {
+			t.Errorf("HTTP POST request preparation failed with unexpected error: %s", err)
+		}
+	})
+	t.Run("HTTP request preparation fails on URL parsing error", func(t *testing.T) {
+		reqURL := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
+		hc := New()
+		_, err := hc.HTTPReq(http.MethodGet, reqURL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP GET request was supposed to fail with invalid URL")
+		}
+	})
 }
 
 func TestClient_HTTPResBody(t *testing.T) {
-	u1 := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
-	u2 := "this://is.invalid.tld/"
-	hc := New()
-	_, _, err := hc.HTTPResBody(http.MethodGet, u1, map[string]string{"foo": "bar"})
-	if err == nil {
-		t.Errorf("HTTP GET request was supposed to fail, but didn't")
-	}
-	_, _, err = hc.HTTPResBody("äöü", u2, map[string]string{"foo": "bar"})
-	if err == nil {
-		t.Errorf("HTTP GET request was supposed to fail, but didn't")
-	}
-	_, _, err = hc.HTTPResBody("POST", u2, map[string]string{"foo": "bar"})
-	if err == nil {
-		t.Errorf("HTTP POST request was supposed to fail, but didn't")
-	}
+	t.Run("normal HTTP GET request succeeds", func(t *testing.T) {
+		server := httptest.NewServer(newTestStringHandler(t, "test"))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		body, resp, err := hc.HTTPResBody(http.MethodGet, server.URL, map[string]string{"foo": "bar"})
+		if err != nil {
+			t.Errorf("HTTP GET request failed: %s", err)
+		}
+		if resp == nil {
+			t.Fatal("HTTP GET request response was nil")
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("HTTP GET request status code was not 200. Expected 200, got: %d", resp.StatusCode)
+		}
+		if !strings.EqualFold(string(body), "test\n") {
+			t.Errorf("expected HTTP GET request body to be %q, got: %q", "test", body)
+		}
+	})
+	t.Run("HTTP GET request fails with invalid URL", func(t *testing.T) {
+		reqURL := "this://is.invalid.tld/with/invalid/chars/" + string([]byte{0x7f})
+		hc := New()
+		_, _, err := hc.HTTPResBody(http.MethodGet, reqURL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP GET request was supposed to fail with invalid URL")
+		}
+	})
+	t.Run("HTTP GET request fails on HTTP server error", func(t *testing.T) {
+		server := httptest.NewServer(newTestFailureHandler(t, http.StatusInternalServerError))
+		defer server.Close()
+		hc := New()
+		_, _, err := hc.HTTPResBody(http.MethodGet, server.URL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP GET request was supposed to fail with HTTP server error")
+		}
+	})
+	t.Run("HTTP GET request fails on HTTP client error", func(t *testing.T) {
+		reqURL := "http://invalid.tld/"
+		hc := New()
+		_, _, err := hc.HTTPResBody(http.MethodGet, reqURL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP GET request was supposed to fail on non-existent URL")
+		}
+	})
+	t.Run("HTTP GET request succeeds with rate limit sleep", func(t *testing.T) {
+		run := 0
+		server := httptest.NewServer(newTestRetryHandler(t, &run, false))
+		defer server.Close()
+		hc := New(WithRateLimitSleep(), WithLogger(newTestLogger(t)))
+		_, resp, err := hc.HTTPResBody(http.MethodGet, server.URL, map[string]string{"foo": "bar"})
+		if err != nil {
+			t.Errorf("HTTP GET request failed: %s", err)
+		}
+		if resp == nil {
+			t.Fatal("HTTP GET request response was nil")
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("HTTP GET request status code was not 200. Expected 200, got: %d", resp.StatusCode)
+		}
+	})
+	t.Run("HTTP GET request fails with invalid rate limit response", func(t *testing.T) {
+		run := -1
+		server := httptest.NewServer(newTestRetryHandler(t, &run, false))
+		defer server.Close()
+		hc := New(WithRateLimitSleep(), WithLogger(newTestLogger(t)))
+		_, _, err := hc.HTTPResBody(http.MethodGet, server.URL, map[string]string{"foo": "bar"})
+		if err == nil {
+			t.Error("HTTP GET request was supposed to fail with invalid rate limit response")
+		}
+	})
 }
-
-*/
 
 // testLogger is a test logger type that can be used with the WithLogger option in tests.
 type testLogger struct {
@@ -310,6 +414,34 @@ func newTestFileHandler(t *testing.T, filename string) http.Handler {
 func newTestFailureHandler(t *testing.T, code int) http.Handler {
 	t.Helper()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if code == http.StatusTooManyRequests {
+			w.Header().Set("Retry-After", "3")
+		}
 		w.WriteHeader(code)
+	})
+}
+
+// newTestRetryHandler creates an HTTP handler to test retry logic by simulating "Retry-After" responses
+// and success cases.
+func newTestRetryHandler(t *testing.T, run *int, returnArray bool) http.Handler {
+	t.Helper()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if *run == -1 {
+			w.Header().Set("Retry-After", "invalid")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		if *run == 0 {
+			*run++
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if returnArray {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		_, _ = w.Write([]byte(`{}`))
 	})
 }
