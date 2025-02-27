@@ -498,6 +498,20 @@ func TestBreachAPI_BreachedAccount(t *testing.T) {
 			t.Error("expected to fail on broken JSON")
 		}
 	})
+	t.Run("account request without API key should fail", func(t *testing.T) {
+		email := "toni.tester@domain.tld"
+		resp := fmt.Sprintf(ServerResponseBreachAccount, email)
+		server := httptest.NewServer(newTestFileHandler(t, resp))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.BreachedAccount("does.not.exist@domain.tld")
+		if err == nil {
+			t.Error("expected to fail without API key")
+		}
+		if !errors.Is(err, ErrMethodRequiresAPIKey) {
+			t.Errorf("expected to error to be: %s, got: %s", ErrMethodRequiresAPIKey, err)
+		}
+	})
 }
 
 func TestBreachAPI_SubscribedDomains(t *testing.T) {
@@ -544,6 +558,18 @@ func TestBreachAPI_SubscribedDomains(t *testing.T) {
 		_, _, err := hc.BreachAPI.SubscribedDomains()
 		if err == nil {
 			t.Errorf("expected to fail on broken JSON")
+		}
+	})
+	t.Run("subscribed domains without API key should fail", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachSubscribedDomains))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.SubscribedDomains()
+		if err == nil {
+			t.Errorf("expected subscribed domains to fail without API key")
+		}
+		if !errors.Is(err, ErrMethodRequiresAPIKey) {
+			t.Errorf("expected to error to be: %s, got: %s", ErrMethodRequiresAPIKey, err)
 		}
 	})
 }
@@ -593,6 +619,18 @@ func TestBreachAPI_BreachedDomain(t *testing.T) {
 		_, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
 		if err == nil {
 			t.Errorf("expected to fail on broken JSON")
+		}
+	})
+	t.Run("breached domain without API key should fail", func(t *testing.T) {
+		server := httptest.NewServer(newTestFileHandler(t, ServerResponseBreachedDomain))
+		defer server.Close()
+		hc := New(WithHTTPClient(newTestClient(t, server.URL)))
+		_, _, err := hc.BreachAPI.BreachedDomain("domain.tld")
+		if err == nil {
+			t.Errorf("expected to fail on missing API key")
+		}
+		if !errors.Is(err, ErrMethodRequiresAPIKey) {
+			t.Errorf("expected to error to be: %s, got: %s", ErrMethodRequiresAPIKey, err)
 		}
 	})
 }
