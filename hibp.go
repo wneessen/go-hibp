@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version represents the version of this package
-	Version = "2.0.1"
+	Version = "1.1.0"
 
 	// BaseURL is the base URL for the majority of API endpoints
 	BaseURL = "https://haveibeenpwned.com/api/v3"
