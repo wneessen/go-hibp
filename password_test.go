@@ -328,19 +328,6 @@ func TestPwnedPassAPI_ListHashesPrefix(t *testing.T) {
 	})
 }
 
-// TestPwnedPassAPI_checkPassword_integration preforms an integration test against the
-// online PwnedPass API instead of our mock server
-func TestPwnedPassAPI_CheckPassword_integration(t *testing.T) {
-	hc := New()
-	m, _, err := hc.PwnedPassAPI.CheckPassword("test")
-	if err != nil {
-		t.Errorf("CheckPassword failed: %s", err)
-	}
-	if m.Count == 0 {
-		t.Error("CheckPassword returned a zero count for a leaked password")
-	}
-}
-
 // ExamplePwnedPassAPI_CheckPassword is a code example to show how to check a given password
 // against the HIBP passwords API
 func ExamplePwnedPassAPI_CheckPassword() {
