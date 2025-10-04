@@ -25,14 +25,14 @@ func TestAPIDate_UnmarshalJSON(t *testing.T) {
 		if d.String != "test" {
 			t.Errorf("String is not test")
 		}
-		if d.Date.Time.Year() != 2021 {
-			t.Errorf("expected year to be %d, got %d", 2021, d.Date.Time.Year())
+		if d.Date.Year() != 2021 {
+			t.Errorf("expected year to be %d, got %d", 2021, d.Date.Year())
 		}
-		if d.Date.Time.Month() != 1 {
-			t.Errorf("expected month to be %d, got %d", 1, d.Date.Time.Month())
+		if d.Date.Month() != 1 {
+			t.Errorf("expected month to be %d, got %d", 1, d.Date.Month())
 		}
-		if d.Date.Time.Day() != 2 {
-			t.Errorf("expected day to be %d, got %d", 2, d.Date.Time.Day())
+		if d.Date.Day() != 2 {
+			t.Errorf("expected day to be %d, got %d", 2, d.Date.Day())
 		}
 	})
 	t.Run("API date in format ISO8601", func(t *testing.T) {
@@ -45,14 +45,14 @@ func TestAPIDate_UnmarshalJSON(t *testing.T) {
 		if d.String != "test" {
 			t.Errorf("String is not test")
 		}
-		if d.Date.Time.Year() != 2021 {
-			t.Errorf("expected year to be %d, got %d", 2021, d.Date.Time.Year())
+		if d.Date.Year() != 2021 {
+			t.Errorf("expected year to be %d, got %d", 2021, d.Date.Year())
 		}
-		if d.Date.Time.Month() != 1 {
-			t.Errorf("expected month to be %d, got %d", 1, d.Date.Time.Month())
+		if d.Date.Month() != 1 {
+			t.Errorf("expected month to be %d, got %d", 1, d.Date.Month())
 		}
-		if d.Date.Time.Day() != 2 {
-			t.Errorf("expected day to be %d, got %d", 2, d.Date.Time.Day())
+		if d.Date.Day() != 2 {
+			t.Errorf("expected day to be %d, got %d", 2, d.Date.Day())
 		}
 	})
 	t.Run("API date in unsupported format", func(t *testing.T) {
@@ -88,14 +88,14 @@ func TestAPIDate_UnmarshalJSON(t *testing.T) {
 		if d.String != "test" {
 			t.Errorf("String is not test")
 		}
-		if d.Date.Time.Year() != 1 {
-			t.Errorf("expected year to be %d, got %d", 1, d.Date.Time.Year())
+		if d.Date.Year() != 1 {
+			t.Errorf("expected year to be %d, got %d", 1, d.Date.Year())
 		}
-		if d.Date.Time.Month() != 1 {
-			t.Errorf("expected month to be %d, got %d", 1, d.Date.Time.Month())
+		if d.Date.Month() != 1 {
+			t.Errorf("expected month to be %d, got %d", 1, d.Date.Month())
 		}
-		if d.Date.Time.Day() != 1 {
-			t.Errorf("expected day to be %d, got %d", 1, d.Date.Time.Day())
+		if d.Date.Day() != 1 {
+			t.Errorf("expected day to be %d, got %d", 1, d.Date.Day())
 		}
 	})
 }

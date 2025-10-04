@@ -87,7 +87,7 @@ func (d *digest) Write(p []byte) (nn int, err error) {
 	if len(p) > 0 {
 		d.nx = copy(d.x[:], p)
 	}
-	return
+	return nn, err
 }
 
 func (d *digest) Sum(in []byte) []byte {

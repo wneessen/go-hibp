@@ -6,4 +6,4 @@ module github.com/wneessen/go-hibp
 
 go 1.18
 
-require github.com/wneessen/niljson v0.1.0
+require github.com/wneessen/niljson v0.1.1
