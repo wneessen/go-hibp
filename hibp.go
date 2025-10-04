@@ -264,8 +264,7 @@ func (c *Client) HTTPResBody(m string, p string, q map[string]string) ([]byte, *
 		// Wait for one additional second to ensure that we don't retry too early due to integer rounding issues.
 		delayTime += 1 * time.Second
 		if c.logger != nil {
-			_, _ = c.logger.Write([]byte(fmt.Sprintf("API rate limit hit. Retrying request in %s\n",
-				delayTime.String())))
+			_, _ = fmt.Fprintf(c.logger, "API rate limit hit. Retrying request in %s\n", delayTime.String())
 		}
 		time.Sleep(delayTime)
 		return c.HTTPResBody(m, p, q)
