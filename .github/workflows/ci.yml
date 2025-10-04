@@ -28,7 +28,7 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest]
-                go: ['1.24']
+                go: ['1.25']
         steps:
             - name: Harden Runner
               uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
@@ -60,7 +60,7 @@ jobs:
             cancel-in-progress: true
         strategy:
             matrix:
-                go: ['1.24']
+                go: ['1.25']
         steps:
             - name: Harden Runner
               uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
@@ -117,7 +117,7 @@ jobs:
         strategy:
             matrix:
                 os: [macos-latest, windows-latest]
-                go: ['1.24']
+                go: ['1.18', '1.25']
         steps:
             - name: Harden Runner
               uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
@@ -142,7 +142,7 @@ jobs:
             cancel-in-progress: true
         strategy:
             matrix:
-                osver: ['14.1', '14.0', '13.4']
+                osver: ['14.3', '15.0', '13.5']
         steps:
             - name: Checkout Code
               uses: actions/checkout@61b9e3751b92087fd0b06925ba6dd6314e06f089 # master
