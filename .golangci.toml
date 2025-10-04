@@ -1,3 +1,7 @@
+## SPDX-FileCopyrightText: Winni Neessen <winni@neessen.dev>
+##
+## SPDX-License-Identifier: MIT
+
 version = '2'
 
 [run]
